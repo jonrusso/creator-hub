@@ -125,18 +125,37 @@ const TEAM_MEMBERS = ['Admin', 'Editor', 'Designer', 'Sarah', 'Mike'];
 const Logo = ({ variant = 'icon', className = '' }) => {
     if (variant === 'primary') {
         return (
-            <div className={`flex flex-col items-center ${className}`}>
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-orange-brand to-violet-brand flex items-center justify-center mb-3">
-                    <span className="text-white-smoke font-heading text-4xl font-bold">C</span>
+            <div className={`flex flex-col items-center ${className} relative`}>
+                {/* Exclusivity Badge - Top Right Corner */}
+                <div className="absolute -top-4 right-0 md:right-8">
+                    <div className="bg-gradient-to-r from-orange-brand to-violet-brand px-4 py-1 rounded-full shadow-lg">
+                        <span className="text-[9px] font-bold tracking-widest text-white-smoke uppercase">Crew Only</span>
+                    </div>
                 </div>
-                <h1 className="text-white-smoke font-heading text-2xl font-bold tracking-wide">CREATORS CLUB</h1>
-                <p className="text-white-smoke/60 font-body text-sm mt-1">Learn. Share. Connect.</p>
+
+                <div className="w-32 h-32 mb-4 flex items-center justify-center relative overflow-visible">
+                    <div className="absolute inset-0 bg-gradient-to-br from-orange-brand/20 to-violet-brand/20 blur-3xl rounded-full scale-150"></div>
+                    <img src="/logo.png" alt="Creators Hub" className="w-full h-full object-contain relative z-10" />
+                </div>
+
+                <div className="text-center space-y-2">
+                    <h1 className="text-white-smoke font-heading text-2xl font-bold tracking-[0.2em] uppercase">
+                        Creators <span className="text-orange-brand">Hub</span>
+                    </h1>
+                    <div className="flex items-center justify-center gap-2">
+                        <div className="h-px w-8 bg-gradient-to-r from-transparent to-white-smoke/20"></div>
+                        <p className="text-white-smoke/50 font-body text-xs tracking-wider uppercase font-semibold">
+                            Craft • Collaborate • Command
+                        </p>
+                        <div className="h-px w-8 bg-gradient-to-l from-transparent to-white-smoke/20"></div>
+                    </div>
+                </div>
             </div>
         );
     }
     return (
-        <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-orange-brand to-violet-brand flex items-center justify-center ${className}`}>
-            <span className="text-white-smoke font-heading text-xl font-bold">C</span>
+        <div className={`w-10 h-10 flex items-center justify-center ${className}`}>
+            <img src="/logo.png" alt="Creators Hub" className="w-full h-full object-contain" />
         </div>
     );
 };
@@ -160,11 +179,25 @@ const AuthenticationLayer = ({ onLogin }) => {
     };
 
     return (
-        <div className="min-h-screen bg-cyan-blue flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
+        <div className="min-h-screen bg-cyan-blue flex items-center justify-center p-4 relative">
+            {/* Vignette Gradient - Darker Top to Lighter Bottom */}
+            <div className="fixed inset-0 pointer-events-none" style={{
+                background: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 40%, transparent 60%, rgba(0, 0, 0, 0.3) 100%)'
+            }}></div>
+
+
+            <div className="w-full max-w-md relative z-10">
                 <Logo variant="primary" className="mb-12" />
 
-                <div className="bg-onyx rounded-2xl p-8 shadow-2xl border border-white-smoke/5 relative overflow-hidden">
+                <div className="relative z-10" style={{
+                    background: 'rgba(15, 15, 15, 0.4)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 155, 76, 0.3)',
+                    borderRadius: '24px',
+                    boxShadow: '0 0 60px rgba(255, 155, 76, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                    padding: '32px'
+                }}>
                     {/* Admin Toggle (Hidden Corner) */}
                     <button
                         onClick={() => setView('admin')}
@@ -278,7 +311,7 @@ const WorkflowsModule = ({ userRole }) => {
 
                     {section.type === 'image' && (
                         <div className="rounded-xl overflow-hidden border border-white-smoke/5 bg-black/20">
-                            <img src={section.url} alt={section.caption} className="w-full h-auto max-h-[500px] object-contain" />
+                            <img src={section.url} alt={section.caption} className="w-full h-full object-contain" />
                             {section.caption && <p className="p-3 text-sm text-white-smoke/40 italic">{section.caption}</p>}
                         </div>
                     )}
@@ -399,17 +432,32 @@ const WorkflowsModule = ({ userRole }) => {
                     <div
                         key={workflow.id}
                         onClick={() => { setSelectedWorkflow(workflow); setView('detail'); }}
-                        className="group bg-onyx rounded-2xl p-6 border border-white-smoke/5 hover:border-orange-brand/30 transition-all cursor-pointer hover:shadow-xl hover:shadow-orange-brand/5 flex flex-col h-full relative overflow-hidden"
+                        className="group rounded-2xl p-4 transition-all cursor-pointer flex flex-col h-full relative overflow-hidden"
+                        style={{
+                            background: 'rgba(15, 15, 15, 0.3)',
+                            backdropFilter: 'blur(10px)',
+                            WebkitBackdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.border = '1px solid rgba(255, 155, 76, 0.4)';
+                            e.currentTarget.style.boxShadow = '0 0 30px rgba(255, 155, 76, 0.2)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.05)';
+                            e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+                        }}
                     >
                         {workflow.status === 'pending_approval' && <div className="absolute top-0 right-0 bg-yellow-500/20 text-yellow-500 text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">Pending Approval</div>}
 
-                        <div className="flex items-start justify-between mb-4 mt-2">
-                            <div className="p-3 rounded-xl bg-cyan-blue border border-white-smoke/5 group-hover:border-orange-brand/20 transition-colors">
-                                <FileText className="w-6 h-6 text-orange-brand" />
+                        <div className="flex items-start justify-between mb-3 mt-1">
+                            <div className="p-2 rounded-lg bg-cyan-blue border border-white-smoke/5 group-hover:border-orange-brand/20 transition-colors">
+                                <FileText className="w-5 h-5 text-orange-brand" />
                             </div>
                         </div>
-                        <h3 className="text-white-smoke font-heading text-xl font-bold mb-2 group-hover:text-orange-brand transition-colors">{workflow.title}</h3>
-                        <p className="text-white-smoke/60 text-sm mb-6 line-clamp-2">{workflow.description}</p>
+                        <h3 className="text-white-smoke font-heading text-lg font-bold mb-2 group-hover:text-orange-brand transition-colors">{workflow.title}</h3>
+                        <p className="text-white-smoke/60 text-xs mb-4 line-clamp-2">{workflow.description}</p>
                         <div className="mt-auto pt-4 border-t border-white-smoke/5 flex items-center justify-between text-xs text-white-smoke/40">
                             <span>Updated {workflow.lastUpdated}</span>
                             <span>by {workflow.author}</span>
@@ -598,15 +646,38 @@ const CreatorHub = () => {
     if (!isAuthenticated) return <AuthenticationLayer onLogin={(role) => { setUserRole(role); setIsAuthenticated(true); }} />;
 
     return (
-        <div className="min-h-screen bg-cyan-blue flex font-body text-white-smoke overflow-hidden text-sm md:text-base">
-            <aside className="w-64 bg-onyx border-r border-white-smoke/5 flex flex-col fixed h-full z-20">
-                <div className="p-6">
-                    <Logo variant="icon" />
-                    <div className="mt-4">
-                        <h2 className="font-heading font-bold tracking-wide">Creator Hub</h2>
-                        <div className="flex items-center gap-2 mt-1 px-2 py-1 bg-white-smoke/5 rounded-lg w-fit">
-                            <User className="w-3 h-3 text-orange-brand" />
-                            <span className="text-[10px] uppercase tracking-widest font-bold">{userRole}</span>
+        <div className="min-h-screen bg-cyan-blue flex font-body text-white-smoke overflow-hidden text-sm md:text-base relative">
+
+
+            <aside className="w-64 flex flex-col fixed h-full z-20" style={{
+                background: 'rgba(15, 15, 15, 0.5)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderRight: '1px solid rgba(139, 92, 246, 0.2)',
+                boxShadow: '0 0 40px rgba(139, 92, 246, 0.1)'
+            }}>
+                {/* Sidebar Header - Enhanced */}
+                <div className="p-6 border-b border-white-smoke/5">
+                    {/* Centered Logo */}
+                    <div className="flex justify-center mb-5">
+                        <div className="w-16 h-16 relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-orange-brand/10 to-violet-brand/10 blur-xl rounded-full"></div>
+                            <img src="/logo.png" alt="Creators Hub" className="w-full h-full object-contain relative z-10" />
+                        </div>
+                    </div>
+
+                    {/* Stylized Branding */}
+                    <div className="text-center space-y-3">
+                        <h2 className="font-heading font-bold text-lg tracking-[0.15em] uppercase">
+                            Creators <span className="text-orange-brand">Hub</span>
+                        </h2>
+
+                        {/* Role Badge */}
+                        <div className="flex justify-center">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-orange-brand/10 to-violet-brand/10 border border-orange-brand/20 rounded-full">
+                                <User className="w-3 h-3 text-orange-brand" />
+                                <span className="text-[10px] uppercase tracking-widest font-bold text-white-smoke">{userRole}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

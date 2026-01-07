@@ -12,4 +12,44 @@ body {
   font-family: 'Inter', 'Helvetica Neue', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Blueprint Grid Pattern */
+  background-image:
+    /* Vertical lines */
+    repeating-linear-gradient(90deg,
+      transparent,
+      transparent 79px,
+      rgba(139, 92, 246, 0.08) 79px,
+      rgba(139, 92, 246, 0.08) 80px),
+    /* Horizontal lines */
+    repeating-linear-gradient(0deg,
+      transparent,
+      transparent 79px,
+      rgba(139, 92, 246, 0.08) 79px,
+      rgba(139, 92, 246, 0.08) 80px),
+    /* Major grid lines every 400px */
+    repeating-linear-gradient(90deg,
+      transparent,
+      transparent 399px,
+      rgba(255, 155, 76, 0.12) 399px,
+      rgba(255, 155, 76, 0.12) 400px),
+    repeating-linear-gradient(0deg,
+      transparent,
+      transparent 399px,
+      rgba(255, 155, 76, 0.12) 399px,
+      rgba(255, 155, 76, 0.12) 400px);
+  background-size: 80px 80px, 80px 80px, 400px 400px, 400px 400px;
+}
+
+/* Subtle animation for the grid (optional) */
+@keyframes gridPulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }

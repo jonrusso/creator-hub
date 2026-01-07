@@ -7,7 +7,7 @@ export default {
     theme: {
         extend: {
             colors: {
-                'cyan-blue': '#000e1b',
+                'cyan-blue': '#000000',  // Pure black for maximum contrast
                 'onyx': '#0f0f0f',
                 'orange-brand': '#ff9b4c',
                 'violet-brand': '#8854fc',
