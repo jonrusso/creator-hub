@@ -1,52 +1,66 @@
-// API Client - toggleable between mock and real API
-const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false'; // Default to mock
+// API Client - toggleable between mock and Supabase
+import { isSupabaseConfigured } from '../supabase/client';
 
 // Import mock services
 import * as mockServices from '../mock';
 
-// Real API base URL (to be implemented)
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Import Supabase services
+import * as supabaseServices from '../supabase';
+
+// Determine mode from environment or Supabase configuration
+const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false' || !isSupabaseConfigured();
 
 // API client wrapper
 const createClient = () => {
     if (USE_MOCK) {
         console.log('🔧 Using MOCK data services');
-        return mockServices;
+        return {
+            workflowsService: mockServices.workflowsService,
+            boardsService: mockServices.boardsService,
+            authService: mockServices.authService,
+            // Mock versions don't have these
+            sectionsService: null,
+            productionService: null,
+            checklistService: null,
+            inspirationService: null
+        };
     }
 
-    console.log('🌐 Using REAL API:', API_BASE_URL);
-    // Real API implementation would go here
+    console.log('🌐 Using SUPABASE services');
     return {
-        workflowsService: {
-            getAll: () => fetch(`${API_BASE_URL}/workflows`).then(r => r.json()),
-            getById: (id) => fetch(`${API_BASE_URL}/workflows/${id}`).then(r => r.json()),
-            create: (data) => fetch(`${API_BASE_URL}/workflows`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            }).then(r => r.json()),
-            update: (id, data) => fetch(`${API_BASE_URL}/workflows/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            }).then(r => r.json()),
-            delete: (id) => fetch(`${API_BASE_URL}/workflows/${id}`, {
-                method: 'DELETE'
-            }).then(r => r.json())
-        },
+        // Workflows
+        workflowsService: supabaseServices.workflowsService,
+        sectionsService: supabaseServices.sectionsService,
+
+        // Boards
+        productionService: supabaseServices.productionService,
+        checklistService: supabaseServices.checklistService,
+        inspirationService: supabaseServices.inspirationService,
+
+        // Legacy compatibility (mapped to new services)
         boardsService: {
-            getProduction: () => fetch(`${API_BASE_URL}/production`).then(r => r.json()),
-            getInspiration: () => fetch(`${API_BASE_URL}/inspiration`).then(r => r.json()),
+            getProduction: supabaseServices.productionService.getAll,
+            getInspiration: supabaseServices.inspirationService.getAll,
+            createProduction: supabaseServices.productionService.create,
+            updateProduction: supabaseServices.productionService.update,
+            deleteProduction: supabaseServices.productionService.delete,
+            saveInspiration: supabaseServices.inspirationService.toggleSaved
         },
-        authService: {
-            login: (email, password) => fetch(`${API_BASE_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            }).then(r => r.json())
-        }
+
+        // Auth is handled by AuthContext, but provide reference
+        authService: null
     };
 };
 
 export const api = createClient();
 export { USE_MOCK };
+
+// Direct exports for tree-shaking
+export const {
+    workflowsService,
+    boardsService,
+    sectionsService,
+    productionService,
+    checklistService,
+    inspirationService
+} = api;

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow Sync - Creator Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 320px;
+            min-height: 400px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(180deg, #000e1b 0%, #0f0f0f 100%);
+            color: #f4f4f4;
+        }
+        
+        .container {
+            padding: 20px;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #ff9b4c 0%, #8854fc 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+        
+        .header-text h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #f4f4f4;
+        }
+        
+        .header-text p {
+            font-size: 11px;
+            color: rgba(244, 244, 244, 0.5);
+        }
+        
+        /* Status Card */
+        .status-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 155, 76, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+        
+        .status-indicator.connected {
+            background: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+        
+        .status-text {
+            font-size: 13px;
+            color: rgba(244, 244, 244, 0.8);
+        }
+        
+        .status-text strong {
+            color: #f4f4f4;
+        }
+        
+        /* Form */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(244, 244, 244, 0.6);
+            margin-bottom: 6px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #f4f4f4;
+            font-size: 13px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #ff9b4c;
+        }
+        
+        .form-group input::placeholder {
+            color: rgba(244, 244, 244, 0.3);
+        }
+        
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ff9b4c 0%, #ff7a1a 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 155, 76, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f4f4f4;
+            margin-top: 8px;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Messages */
+        .message {
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .message.success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+        
+        .message.error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+        
+        /* Sections */
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #f4f4f4;
+        }
+        
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 20px 0;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 20px;
+        }
+        
+        .footer a {
+            color: #ff9b4c;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #ff9b4c;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+            <div class="header-text">
+                <h1>Shadow Sync</h1>
+                <p>Creator Hub Extension</p>
+            </div>
+        </div>
+        
+        <!-- Status Card -->
+        <div class="status-card">
+            <div class="status-row">
+                <div class="status-indicator" id="status-indicator"></div>
+                <span class="status-text" id="status-text">Checking connection...</span>
+            </div>
+        </div>
+        
+        <!-- Message Area -->
+        <div id="message" class="message hidden"></div>
+        
+        <!-- Config Section (shown when not configured) -->
+        <div id="config-section" class="section">
+            <h3 class="section-title">Configuration</h3>
+            
+            <div class="form-group">
+                <label for="supabase-url">Supabase URL</label>
+                <input type="text" id="supabase-url" placeholder="https://your-project.supabase.co">
+            </div>
+            
+            <div class="form-group">
+                <label for="supabase-key">Supabase Anon Key</label>
+                <input type="password" id="supabase-key" placeholder="eyJ...">
+            </div>
+            
+            <button class="btn btn-primary" id="save-config-btn">Save Configuration</button>
+        </div>
+        
+        <!-- Login Section (shown when configured but not logged in) -->
+        <div id="login-section" class="section">
+            <h3 class="section-title">Login to Creator Hub</h3>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="name@creatorhub.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••">
+            </div>
+            
+            <button class="btn btn-primary" id="login-btn">Login</button>
+            <button class="btn btn-secondary" id="sync-auth-btn">Sync from Creator Hub</button>
+        </div>
+        
+        <!-- Connected Section -->
+        <div id="connected-section" class="section">
+            <h3 class="section-title">Ready to Save</h3>
+            <p style="font-size: 13px; color: rgba(244, 244, 244, 0.6); margin-bottom: 16px;">
+                Browse Instagram or Pinterest and click the orange <strong>"Hub"</strong> button on any post to save it.
+            </p>
+            
+            <button class="btn btn-secondary" id="logout-btn">Logout</button>
+            <button class="btn btn-secondary" id="reset-config-btn" style="margin-top: 8px;">Reset Configuration</button>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <a href="http://localhost:5173" target="_blank">Open Creator Hub →</a>
+        </div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
