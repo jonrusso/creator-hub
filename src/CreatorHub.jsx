@@ -10,6 +10,7 @@ import {
 import { Logo, GlassCard, Input, Button } from './components/common';
 import { AuthenticationLayer } from './components/auth';
 import TeamModule from './components/TeamModule';
+import { ProductionBoard } from './components/boards';
 import { WORKFLOWS_DB, PRODUCTION_ITEMS, INSPIRATION_ITEMS, TEAM_MEMBERS } from './services/mock';
 import { supabase, isSupabaseConfigured } from './services/supabase/client';
 
@@ -228,107 +229,6 @@ const WorkflowsModule = ({ userRole }) => {
 const BoardsModule = ({ userRole }) => {
     const [activeTab, setActiveTab] = useState('production');
 
-    // Trello-style Production Board
-    const ProductionView = () => {
-        const [items, setItems] = useState(PRODUCTION_ITEMS);
-        const [columns, setColumns] = useState(['scripting', 'production', 'qa']);
-        const [selectedCard, setSelectedCard] = useState(null); // For Modal
-
-        // Modal Component
-        const CardModal = ({ card, onClose }) => {
-            if (!card) return null;
-            return (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-onyx w-full max-w-2xl rounded-2xl border border-white-smoke/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-white-smoke/5 flex justify-between items-start">
-                            <h2 className="text-2xl font-bold text-white-smoke font-heading">{card.title}</h2>
-                            <button onClick={onClose}><X className="w-6 h-6 text-white-smoke/40 hover:text-white-smoke" /></button>
-                        </div>
-                        <div className="p-6 overflow-y-auto space-y-6">
-                            {/* Description */}
-                            <div>
-                                <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">Description</label>
-                                <textarea className="w-full bg-cyan-blue/50 p-3 rounded-lg text-white-smoke/80 text-sm outline-none border border-white-smoke/5" rows={3} defaultValue={card.description} />
-                            </div>
-
-                            {/* Assignee */}
-                            <div>
-                                <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">Assignee</label>
-                                <div className="flex gap-2">
-                                    {TEAM_MEMBERS.map(member => (
-                                        <button key={member} className={`px-3 py-1.5 rounded-full text-xs font-medium border ${card.assignee === member ? 'bg-orange-brand text-white-smoke border-orange-brand' : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'}`}>
-                                            {member}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Checklists */}
-                            <div>
-                                <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">Checklist</label>
-                                <div className="space-y-2">
-                                    {card.checklists?.map(item => (
-                                        <div key={item.id} className="flex items-center gap-3 p-2 hover:bg-white-smoke/5 rounded-lg">
-                                            <button className={`${item.checked ? 'text-orange-brand' : 'text-white-smoke/20'}`}>
-                                                {item.checked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                                            </button>
-                                            <span className={`text-sm ${item.checked ? 'text-white-smoke/40 line-through' : 'text-white-smoke/80'}`}>{item.label}</span>
-                                        </div>
-                                    ))}
-                                    <button className="flex items-center gap-2 text-xs text-orange-brand mt-2 hover:underline"><Plus className="w-3 h-3" /> Add Item</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="p-4 border-t border-white-smoke/5 bg-cyan-blue/30 flex justify-end">
-                            <button onClick={onClose} className="px-4 py-2 bg-white-smoke/10 text-white-smoke rounded-lg text-sm font-medium hover:bg-white-smoke/20">Close</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        return (
-            <div className="animate-fadeIn h-full overflow-x-auto pb-4">
-                {/* Columns */}
-                <div className="flex gap-6 min-w-max">
-                    {columns.map(col => (
-                        <div key={col} className="w-80 flex-shrink-0">
-                            <div className="flex items-center justify-between mb-4 px-1">
-                                <h3 className="font-heading font-bold text-white-smoke uppercase tracking-wider text-sm">{col}</h3>
-                                <span className="text-xs text-white-smoke/40 font-mono bg-white-smoke/5 px-2 py-0.5 rounded-full">{items.filter(i => i.stage === col).length}</span>
-                            </div>
-                            <div className="space-y-3">
-                                {items.filter(i => i.stage === col).map(item => (
-                                    <div
-                                        key={item.id}
-                                        onClick={() => setSelectedCard(item)}
-                                        className="bg-onyx p-4 rounded-xl border border-white-smoke/5 hover:border-orange-brand/40 cursor-pointer shadow-sm group transition-all"
-                                    >
-                                        <h4 className="text-white-smoke font-medium text-sm mb-3 group-hover:text-orange-brand transition-colors">{item.title}</h4>
-                                        <div className="flex justify-between items-center">
-                                            <div className="text-[10px] px-2 py-0.5 rounded bg-violet-brand/20 text-violet-brand font-bold">{item.format}</div>
-                                            {item.assignee && <div className="text-[10px] text-white-smoke/40">@{item.assignee}</div>}
-                                        </div>
-                                    </div>
-                                ))}
-                                <button className="w-full py-2 flex items-center justify-center gap-2 text-white-smoke/20 hover:text-white-smoke/60 hover:bg-white-smoke/5 rounded-xl border border-transparent hover:border-white-smoke/5 border-dashed transition-all">
-                                    <Plus className="w-4 h-4" /> Add Card
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                    {/* Add Column */}
-                    <div className="w-80 flex-shrink-0">
-                        <button className="w-full h-12 flex items-center justify-center gap-2 bg-white-smoke/5 text-white-smoke/40 rounded-xl hover:bg-white-smoke/10 hover:text-white-smoke transition-all">
-                            <Plus className="w-5 h-5" /> Add List
-                        </button>
-                    </div>
-                </div>
-                {selectedCard && <CardModal card={selectedCard} onClose={() => setSelectedCard(null)} />}
-            </div>
-        );
-    };
-
     // Inspiration View (Denser Grid + Accounts)
     const InspirationView = () => {
         const [mockConnected, setMockConnected] = useState(false);
@@ -378,7 +278,14 @@ const BoardsModule = ({ userRole }) => {
                 </div>
             </div>
             <div className="flex-1 min-h-0">
-                {activeTab === 'production' ? <ProductionView /> : <InspirationView />}
+                {activeTab === 'production' ? (
+                    <ProductionBoard
+                        initialItems={PRODUCTION_ITEMS}
+                        teamMembers={TEAM_MEMBERS}
+                    />
+                ) : (
+                    <InspirationView />
+                )}
             </div>
         </div>
     );
