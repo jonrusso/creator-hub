@@ -5,10 +5,11 @@ import {
     User, LogOut, PlayCircle, CheckSquare, Square,
     Plus, Search, Grid, List as ListIcon, Video, ArrowLeft,
     Settings, MoreVertical, ExternalLink, Edit2, Trash2,
-    Eye, FileText, Youtube, Upload, Link as LinkIcon
+    Eye, FileText, Youtube, Upload, Link as LinkIcon, Users
 } from 'lucide-react';
 import { Logo, GlassCard, Input, Button } from './components/common';
 import { AuthenticationLayer } from './components/auth';
+import TeamModule from './components/TeamModule';
 import { WORKFLOWS_DB, PRODUCTION_ITEMS, INSPIRATION_ITEMS, TEAM_MEMBERS } from './services/mock';
 
 
@@ -436,6 +437,9 @@ const CreatorHub = () => {
                     <button onClick={() => setActiveModule('boards')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeModule === 'boards' ? 'bg-white-smoke/5 text-orange-brand border border-orange-brand/20' : 'text-white-smoke/60 hover:text-white-smoke'}`}>
                         <LayoutDashboard className="w-5 h-5" /> <span className="font-medium">Boards</span>
                     </button>
+                    <button onClick={() => setActiveModule('team')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeModule === 'team' ? 'bg-white-smoke/5 text-orange-brand border border-orange-brand/20' : 'text-white-smoke/60 hover:text-white-smoke'}`}>
+                        <Users className="w-5 h-5" /> <span className="font-medium">Team</span>
+                    </button>
                 </nav>
                 <div className="p-4 border-t border-white-smoke/5">
                     <button onClick={() => setIsAuthenticated(false)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white-smoke/40 hover:text-red-400 transition-all">
@@ -447,6 +451,7 @@ const CreatorHub = () => {
                 <div className="h-full overflow-y-auto pr-2">
                     {activeModule === 'workflows' && <WorkflowsModule userRole={userRole} />}
                     {activeModule === 'boards' && <BoardsModule userRole={userRole} />}
+                    {activeModule === 'team' && <TeamModule userRole={userRole} />}
                 </div>
             </main>
         </div>

@@ -55,3 +55,21 @@ body {
     opacity: 0.6;
   }
 }
+
+/* Dark mode select dropdowns */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #1a1a1a;
+  color: #f5f5f5;
+  padding: 8px 12px;
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  background-color: #ff9b4c;
+  color: #1a1a1a;
+}
