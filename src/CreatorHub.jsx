@@ -11,6 +11,7 @@ import { Logo, GlassCard, Input, Button } from './components/common';
 import { AuthenticationLayer } from './components/auth';
 import TeamModule from './components/TeamModule';
 import { WORKFLOWS_DB, PRODUCTION_ITEMS, INSPIRATION_ITEMS, TEAM_MEMBERS } from './services/mock';
+import { supabase, isSupabaseConfigured } from './services/supabase/client';
 
 
 // ==================== WORKFLOWS MODULE (V3: Doc & Approvals) ====================
@@ -392,6 +393,15 @@ const CreatorHub = () => {
     // Permissions Helper
     const canDelete = userRole === 'admin';
 
+    // Logout handler
+    const handleLogout = async () => {
+        if (isSupabaseConfigured()) {
+            await supabase.auth.signOut();
+        }
+        setUserRole(null);
+        setIsAuthenticated(false);
+    };
+
     if (!isAuthenticated) return <AuthenticationLayer onLogin={(role) => { setUserRole(role); setIsAuthenticated(true); }} />;
 
     return (
@@ -442,7 +452,7 @@ const CreatorHub = () => {
                     </button>
                 </nav>
                 <div className="p-4 border-t border-white-smoke/5">
-                    <button onClick={() => setIsAuthenticated(false)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white-smoke/40 hover:text-red-400 transition-all">
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white-smoke/40 hover:text-red-400 transition-all">
                         <LogOut className="w-5 h-5" /> <span className="font-medium">Logout</span>
                     </button>
                 </div>
