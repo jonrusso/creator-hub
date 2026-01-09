@@ -269,14 +269,13 @@ const BoardsModule = ({ userRole }) => {
     };
 
     return (
-        <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0">
-                <div>
-                    <h1 className="text-white-smoke font-heading text-3xl font-bold mb-1">Boards</h1>
-                    <p className="text-white-smoke/60 font-body text-sm">Production Pipeline & Inspiration</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    {/* View Toggle for Production */}
+        <div className="space-y-4 h-[calc(100vh-140px)] flex flex-col">
+            {/* Header */}
+            <div className="flex-shrink-0">
+                <div className="flex items-center justify-between mb-3">
+                    <h1 className="text-white-smoke font-heading text-3xl font-bold">Boards</h1>
+
+                    {/* Kanban/Timeline Toggle - Only for Production */}
                     {activeTab === 'production' && (
                         <div className="bg-onyx p-1 rounded-lg flex border border-white-smoke/5">
                             <button
@@ -293,11 +292,35 @@ const BoardsModule = ({ userRole }) => {
                             </button>
                         </div>
                     )}
-                    {/* Tab Toggle */}
-                    <div className="bg-onyx p-1 rounded-xl flex border border-white-smoke/5">
-                        <button onClick={() => setActiveTab('production')} className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'production' ? 'bg-white-smoke/10 text-white-smoke' : 'text-white-smoke/60'}`}>Production</button>
-                        <button onClick={() => setActiveTab('inspiration')} className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'inspiration' ? 'bg-violet-brand/20 text-violet-brand shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'text-white-smoke/60'}`}>Inspiration</button>
-                    </div>
+                </div>
+
+                {/* Production / Inspiration Tabs - Below Title */}
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setActiveTab('production')}
+                        className={`relative px-4 py-2 text-sm font-medium transition-all ${activeTab === 'production'
+                                ? 'text-orange-brand'
+                                : 'text-white-smoke/40 hover:text-white-smoke/60'
+                            }`}
+                    >
+                        Production
+                        {activeTab === 'production' && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-brand rounded-full" />
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('inspiration')}
+                        className={`relative px-4 py-2 text-sm font-medium transition-all ${activeTab === 'inspiration'
+                                ? 'text-violet-brand'
+                                : 'text-white-smoke/40 hover:text-white-smoke/60'
+                            }`}
+                    >
+                        Inspiration
+                        {activeTab === 'inspiration' && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-brand rounded-full" />
+                        )}
+                    </button>
+                    <div className="flex-1 h-px bg-white-smoke/10" />
                 </div>
             </div>
             <div className="flex-1 min-h-0">
