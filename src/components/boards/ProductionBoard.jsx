@@ -110,12 +110,16 @@ const SortableCard = ({ card, onClick }) => {
     };
 
     const dateStatus = getDateStatus(card.dueDate);
+    const isDone = card.stage === 'done';
 
     return (
         <div
             ref={setNodeRef}
             style={style}
-            className={`bg-onyx p-4 rounded-xl border border-white-smoke/5 hover:border-orange-brand/40 cursor-pointer shadow-sm group transition-all ${isDragging ? 'ring-2 ring-orange-brand' : ''}`}
+            className={`p-4 rounded-xl border cursor-pointer shadow-sm group transition-all ${isDone
+                    ? 'bg-emerald-900/30 border-emerald-500/30 hover:border-emerald-400/50'
+                    : 'bg-onyx border-white-smoke/5 hover:border-orange-brand/40'
+                } ${isDragging ? 'ring-2 ring-orange-brand' : ''}`}
         >
             <div className="flex items-start gap-2">
                 <button
