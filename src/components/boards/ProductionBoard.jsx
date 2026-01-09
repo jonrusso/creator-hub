@@ -100,20 +100,16 @@ const calculateComplexity = (card) => {
     return Math.min(10, Math.max(1, Math.round(score)));
 };
 
-// Get complexity color based on score - matches T-shirt sizing
-const getComplexityColor = (score) => {
-    if (score <= 2) return 'text-sky-400 bg-sky-500/20 border-sky-500/30';      // S - light blue
-    if (score <= 4) return 'text-green-400 bg-green-500/20 border-green-500/30'; // M - green
-    if (score <= 7) return 'text-amber-400 bg-amber-500/20 border-amber-500/30'; // L - amber
-    return 'text-purple-400 bg-purple-500/20 border-purple-500/30';              // XL - purple
+// Get complexity color based on score - consistent amber for star rating
+const getComplexityColor = () => {
+    return 'text-amber-400 bg-amber-500/20 border-amber-500/30';
 };
 
-// Get complexity label based on score - T-shirt sizing (neutral, non-judgmental)
+// Get complexity label as stars (★) - intuitive, neutral rating
 const getComplexityLabel = (score) => {
-    if (score <= 2) return 'S';
-    if (score <= 4) return 'M';
-    if (score <= 7) return 'L';
-    return 'XL';
+    if (score <= 3) return '★';
+    if (score <= 6) return '★★';
+    return '★★★';
 };
 
 // Keyboard shortcuts config
@@ -332,7 +328,7 @@ const SortableCard = ({ card, onClick, onStatusChange, isAdmin = true }) => {
                                 return (
                                     <div
                                         className={`text-[9px] px-1.5 py-0.5 rounded border flex items-center gap-1 font-bold ${getComplexityColor(complexity)}`}
-                                        title={`Size: ${getComplexityLabel(complexity)} (based on scope, deliverables, and team)`}
+                                        title={`Scope: ${getComplexityLabel(complexity)} (★ quick, ★★ standard, ★★★ extended)`}
                                     >
                                         {getComplexityLabel(complexity)}
                                     </div>

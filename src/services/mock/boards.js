@@ -136,9 +136,7 @@ export const PRODUCTION_ITEMS = [
         stageHistory: [
             { stage: 'scripting', approvedBy: 'Keanu', date: '2026-01-09', revision: 1 }
         ],
-        // Complexity fields - TUTORIAL (LARGE ~5-6)
-        assetCount: 4,
-        technicalLevel: 2,
+        // Complexity fields - TUTORIAL (STANDARD ★★ ~4-6)\n        assetCount: 2,\n        technicalLevel: 1,
         dependencies: [],
         timeSpent: 420,
         thumbnail: null,
