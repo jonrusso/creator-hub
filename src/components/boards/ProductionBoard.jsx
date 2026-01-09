@@ -117,8 +117,8 @@ const SortableCard = ({ card, onClick }) => {
             ref={setNodeRef}
             style={style}
             className={`p-4 rounded-xl border cursor-pointer shadow-sm group transition-all ${isDone
-                    ? 'bg-emerald-900/30 border-emerald-500/30 hover:border-emerald-400/50'
-                    : 'bg-onyx border-white-smoke/5 hover:border-orange-brand/40'
+                ? 'bg-emerald-900/30 border-emerald-500/30 hover:border-emerald-400/50'
+                : 'bg-onyx border-white-smoke/5 hover:border-orange-brand/40'
                 } ${isDragging ? 'ring-2 ring-orange-brand' : ''}`}
         >
             <div className="flex items-start gap-2">
@@ -328,8 +328,9 @@ const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard }) => {
     };
 
     return (
-        <div className="w-80 flex-shrink-0">
-            <div className={`flex items-center justify-between mb-4 px-3 py-2 rounded-lg ${colors.bg} border ${colors.border}`}>
+        <div className="w-80 flex-shrink-0 flex flex-col h-full">
+            {/* Column Header */}
+            <div className={`flex items-center justify-between mb-3 px-3 py-2 rounded-lg ${colors.bg} border ${colors.border} flex-shrink-0`}>
                 <h3 className={`font-heading font-bold uppercase tracking-wider text-sm ${colors.text}`}>
                     {title}
                 </h3>
@@ -338,8 +339,9 @@ const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard }) => {
                 </span>
             </div>
 
+            {/* Scrollable Cards Area */}
             <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
-                <div className="space-y-3 min-h-[100px]">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden pr-1 scrollbar-thin space-y-3 min-h-[100px]">
                     {cards.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-white-smoke/10 rounded-xl text-white-smoke/30 text-xs">
                             <Plus className="w-5 h-5 mb-1 opacity-50" />
@@ -357,21 +359,22 @@ const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard }) => {
                 </div>
             </SortableContext>
 
-            {isAdding ? (
-                <div className="mt-3">
+            {/* Add Card Button */}
+            <div className="flex-shrink-0 mt-2">
+                {isAdding ? (
                     <AddCardForm
                         onSubmit={handleAddSubmit}
                         onCancel={() => setIsAdding(false)}
                     />
-                </div>
-            ) : (
-                <button
-                    onClick={() => setIsAdding(true)}
-                    className="w-full mt-3 py-2 flex items-center justify-center gap-2 text-white-smoke/20 hover:text-white-smoke/60 hover:bg-white-smoke/5 rounded-xl border border-transparent hover:border-white-smoke/5 border-dashed transition-all"
-                >
-                    <Plus className="w-4 h-4" /> Add Card
-                </button>
-            )}
+                ) : (
+                    <button
+                        onClick={() => setIsAdding(true)}
+                        className="w-full py-2 flex items-center justify-center gap-2 text-white-smoke/20 hover:text-white-smoke/60 hover:bg-white-smoke/5 rounded-xl border border-transparent hover:border-white-smoke/5 border-dashed transition-all"
+                    >
+                        <Plus className="w-4 h-4" /> Add Card
+                    </button>
+                )}
+            </div>
         </div>
     );
 };
@@ -898,7 +901,7 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
             </div>
 
             {/* Kanban Board */}
-            <div className="flex-1 overflow-x-auto pb-4">
+            <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">
                 <DndContext
                     sensors={sensors}
                     collisionDetection={closestCorners}
@@ -906,7 +909,7 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                     onDragOver={handleDragOver}
                     onDragEnd={handleDragEnd}
                 >
-                    <div className="flex gap-6 min-w-max">
+                    <div className="flex gap-6 min-w-max h-full">
                         {columns.map(col => (
                             <DroppableColumn
                                 key={col}
