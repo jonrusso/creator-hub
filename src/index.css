@@ -73,3 +73,59 @@ select option:checked {
   background-color: #ff9b4c;
   color: #1a1a1a;
 }
+
+/* ==================== Custom Scrollbar - Dark Mode ==================== */
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(30, 30, 36, 0.5);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.4) 0%, rgba(255, 155, 76, 0.4) 100%);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.7) 0%, rgba(255, 155, 76, 0.7) 100%);
+  box-shadow: 0 0 12px rgba(255, 155, 76, 0.5), 0 0 4px rgba(139, 92, 246, 0.4);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #8b5cf6 0%, #ff9b4c 100%);
+  box-shadow: 0 0 20px rgba(255, 155, 76, 0.8), 0 0 8px rgba(139, 92, 246, 0.6);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.4) rgba(30, 30, 36, 0.5);
+}
+
+/* Thin scrollbar variant for modals/cards */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 155, 76, 0.3);
+  border-radius: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 155, 76, 0.6);
+  box-shadow: 0 0 8px rgba(255, 155, 76, 0.4);
+}
