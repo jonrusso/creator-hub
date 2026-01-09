@@ -12,7 +12,7 @@ import { isSupabaseConfigured } from '../services/supabase/client';
 // Mock data for development
 const MOCK_TEAM = [
     { id: '1', email: 'admin@keanuvisuals.com', full_name: 'Keanu', role: 'admin', created_at: '2026-01-07' },
-    { id: '2', email: 'creator@keanuvisuals.com', full_name: 'Creator User', role: 'creator', created_at: '2026-01-08' },
+    { id: '2', email: 'designer@keanuvisuals.com', full_name: 'Designer User', role: 'designer', created_at: '2026-01-08' },
 ];
 
 /**
@@ -245,7 +245,6 @@ const MemberRow = ({
                             <option value="admin">Admin</option>
                             <option value="editor">Editor</option>
                             <option value="designer">Designer</option>
-                            <option value="creator">Creator</option>
                         </select>
                         <button
                             onClick={handleSaveRole}
@@ -267,9 +266,7 @@ const MemberRow = ({
                             ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                             : member.role === 'designer'
                                 ? 'bg-pink-500/20 text-pink-400 border border-pink-500/30'
-                                : member.role === 'creator'
-                                    ? 'bg-sunset-orange/20 text-sunset-orange border border-sunset-orange/30'
-                                    : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                                : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
                         }`}>
                         {member.role === 'admin' && <Shield className="w-3 h-3" />}
                         {member.role || 'Deactivated'}
@@ -316,7 +313,7 @@ const MemberRow = ({
 const InviteModal = ({ onClose, onInvite }) => {
     const [email, setEmail] = useState('');
     const [fullName, setFullName] = useState('');
-    const [role, setRole] = useState('creator');
+    const [role, setRole] = useState('editor');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -411,7 +408,6 @@ const InviteModal = ({ onClose, onInvite }) => {
                             >
                                 <option value="editor" className="bg-charcoal text-white-smoke py-2">Editor</option>
                                 <option value="designer" className="bg-charcoal text-white-smoke py-2">Designer</option>
-                                <option value="creator" className="bg-charcoal text-white-smoke py-2">Creator</option>
                                 <option value="admin" className="bg-charcoal text-white-smoke py-2">Admin</option>
                             </select>
                             <p className="mt-1.5 text-xs text-white-smoke/50">

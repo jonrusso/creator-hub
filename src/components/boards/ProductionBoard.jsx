@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
     DndContext,
     DragOverlay,
@@ -18,7 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
     Plus, X, CheckSquare, Square, GripVertical,
-    MoreVertical, Calendar, User as UserIcon
+    Trash2, Calendar, User as UserIcon, Edit2, Save, Clock
 } from 'lucide-react';
 
 // LexoRank-style fractional ordering helper
@@ -26,11 +26,10 @@ const generateRank = (before, after) => {
     const MIN = 'a';
     const MAX = 'z';
 
-    if (!before && !after) return 'm'; // Middle of alphabet
+    if (!before && !after) return 'm';
     if (!before) return String.fromCharCode(after.charCodeAt(0) - 1) || 'a';
     if (!after) return before + 'm';
 
-    // Generate rank between before and after
     let rank = '';
     for (let i = 0; i < Math.max(before.length, after.length) + 1; i++) {
         const prevChar = before[i] || MIN;
@@ -56,6 +55,25 @@ const generateRank = (before, after) => {
     return rank + 'm';
 };
 
+// Format date for display
+const formatDate = (dateStr) => {
+    if (!dateStr) return null;
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
+// Check if date is overdue or soon
+const getDateStatus = (dueDate) => {
+    if (!dueDate) return null;
+    const now = new Date();
+    const due = new Date(dueDate);
+    const diffDays = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return 'overdue';
+    if (diffDays <= 3) return 'soon';
+    return 'normal';
+};
+
 // Sortable Card Component
 const SortableCard = ({ card, onClick }) => {
     const {
@@ -73,6 +91,8 @@ const SortableCard = ({ card, onClick }) => {
         opacity: isDragging ? 0.5 : 1,
     };
 
+    const dateStatus = getDateStatus(card.dueDate);
+
     return (
         <div
             ref={setNodeRef}
@@ -80,7 +100,6 @@ const SortableCard = ({ card, onClick }) => {
             className={`bg-onyx p-4 rounded-xl border border-white-smoke/5 hover:border-orange-brand/40 cursor-pointer shadow-sm group transition-all ${isDragging ? 'ring-2 ring-orange-brand' : ''}`}
         >
             <div className="flex items-start gap-2">
-                {/* Drag Handle */}
                 <button
                     {...attributes}
                     {...listeners}
@@ -89,14 +108,14 @@ const SortableCard = ({ card, onClick }) => {
                     <GripVertical className="w-4 h-4" />
                 </button>
 
-                {/* Card Content */}
                 <div className="flex-1" onClick={onClick}>
-                    <h4 className="text-white-smoke font-medium text-sm mb-3 group-hover:text-orange-brand transition-colors">
+                    <h4 className="text-white-smoke font-medium text-sm mb-2 group-hover:text-orange-brand transition-colors">
                         {card.title}
                     </h4>
-                    <div className="flex justify-between items-center">
+
+                    <div className="flex justify-between items-center mb-2">
                         <div className="text-[10px] px-2 py-0.5 rounded bg-violet-brand/20 text-violet-brand font-bold">
-                            {card.format}
+                            {card.format || 'Task'}
                         </div>
                         {card.assignee && (
                             <div className="text-[10px] text-white-smoke/40 flex items-center gap-1">
@@ -105,9 +124,21 @@ const SortableCard = ({ card, onClick }) => {
                             </div>
                         )}
                     </div>
+
+                    {/* Due Date Badge */}
+                    {card.dueDate && (
+                        <div className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 mb-2 ${dateStatus === 'overdue' ? 'bg-red-500/20 text-red-400' :
+                                dateStatus === 'soon' ? 'bg-yellow-500/20 text-yellow-400' :
+                                    'bg-white-smoke/10 text-white-smoke/50'
+                            }`}>
+                            <Clock className="w-3 h-3" />
+                            {formatDate(card.dueDate)}
+                        </div>
+                    )}
+
                     {/* Progress indicator for checklists */}
                     {card.checklists && card.checklists.length > 0 && (
-                        <div className="mt-2 flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                             <div className="flex-1 h-1 bg-white-smoke/10 rounded-full overflow-hidden">
                                 <div
                                     className="h-full bg-orange-brand rounded-full transition-all"
@@ -127,9 +158,62 @@ const SortableCard = ({ card, onClick }) => {
     );
 };
 
+// Add Card Form Component
+const AddCardForm = ({ onSubmit, onCancel }) => {
+    const [title, setTitle] = useState('');
+    const inputRef = useRef(null);
+
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, []);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (title.trim()) {
+            onSubmit(title.trim());
+            setTitle('');
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="bg-onyx p-3 rounded-xl border border-orange-brand/30">
+            <input
+                ref={inputRef}
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter card title..."
+                className="w-full bg-transparent text-white-smoke text-sm outline-none placeholder-white-smoke/30 mb-2"
+                onKeyDown={(e) => e.key === 'Escape' && onCancel()}
+            />
+            <div className="flex gap-2">
+                <button
+                    type="submit"
+                    className="px-3 py-1.5 bg-orange-brand text-white-smoke text-xs font-medium rounded-lg hover:bg-orange-brand/80"
+                >
+                    Add Card
+                </button>
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="px-3 py-1.5 text-white-smoke/50 text-xs hover:text-white-smoke"
+                >
+                    Cancel
+                </button>
+            </div>
+        </form>
+    );
+};
+
 // Droppable Column Component
 const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard }) => {
+    const [isAdding, setIsAdding] = useState(false);
     const cardIds = cards.map(c => c.id);
+
+    const handleAddSubmit = (cardTitle) => {
+        onAddCard(cardTitle);
+        setIsAdding(false);
+    };
 
     return (
         <div className="w-80 flex-shrink-0">
@@ -154,21 +238,50 @@ const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard }) => {
                 </div>
             </SortableContext>
 
-            <button
-                onClick={onAddCard}
-                className="w-full mt-3 py-2 flex items-center justify-center gap-2 text-white-smoke/20 hover:text-white-smoke/60 hover:bg-white-smoke/5 rounded-xl border border-transparent hover:border-white-smoke/5 border-dashed transition-all"
-            >
-                <Plus className="w-4 h-4" /> Add Card
-            </button>
+            {isAdding ? (
+                <div className="mt-3">
+                    <AddCardForm
+                        onSubmit={handleAddSubmit}
+                        onCancel={() => setIsAdding(false)}
+                    />
+                </div>
+            ) : (
+                <button
+                    onClick={() => setIsAdding(true)}
+                    className="w-full mt-3 py-2 flex items-center justify-center gap-2 text-white-smoke/20 hover:text-white-smoke/60 hover:bg-white-smoke/5 rounded-xl border border-transparent hover:border-white-smoke/5 border-dashed transition-all"
+                >
+                    <Plus className="w-4 h-4" /> Add Card
+                </button>
+            )}
         </div>
     );
 };
 
-// Card Detail Modal
-const CardModal = ({ card, onClose, onUpdate, teamMembers }) => {
+// Enhanced Card Detail Modal
+const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
     const [localCard, setLocalCard] = useState(card);
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [newChecklistItem, setNewChecklistItem] = useState('');
+    const titleInputRef = useRef(null);
+
+    useEffect(() => {
+        setLocalCard(card);
+    }, [card]);
+
+    useEffect(() => {
+        if (isEditingTitle && titleInputRef.current) {
+            titleInputRef.current.focus();
+            titleInputRef.current.select();
+        }
+    }, [isEditingTitle]);
 
     if (!card) return null;
+
+    const updateCard = (updates) => {
+        const updated = { ...localCard, ...updates };
+        setLocalCard(updated);
+        onUpdate?.(updated);
+    };
 
     const toggleChecklist = (itemId) => {
         const updated = {
@@ -181,11 +294,62 @@ const CardModal = ({ card, onClose, onUpdate, teamMembers }) => {
         onUpdate?.(updated);
     };
 
+    const addChecklistItem = () => {
+        if (!newChecklistItem.trim()) return;
+        const newItem = {
+            id: `check-${Date.now()}`,
+            label: newChecklistItem.trim(),
+            checked: false
+        };
+        const updated = {
+            ...localCard,
+            checklists: [...(localCard.checklists || []), newItem]
+        };
+        setLocalCard(updated);
+        onUpdate?.(updated);
+        setNewChecklistItem('');
+    };
+
+    const deleteChecklistItem = (itemId) => {
+        const updated = {
+            ...localCard,
+            checklists: localCard.checklists?.filter(item => item.id !== itemId)
+        };
+        setLocalCard(updated);
+        onUpdate?.(updated);
+    };
+
+    const handleAssign = (member) => {
+        updateCard({ assignee: localCard.assignee === member ? null : member });
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
             <div className="bg-onyx w-full max-w-2xl rounded-2xl border border-white-smoke/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                {/* Header */}
                 <div className="p-6 border-b border-white-smoke/5 flex justify-between items-start">
-                    <h2 className="text-2xl font-bold text-white-smoke font-heading">{localCard.title}</h2>
+                    {isEditingTitle ? (
+                        <input
+                            ref={titleInputRef}
+                            type="text"
+                            value={localCard.title}
+                            onChange={(e) => setLocalCard({ ...localCard, title: e.target.value })}
+                            onBlur={() => { setIsEditingTitle(false); onUpdate?.(localCard); }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') { setIsEditingTitle(false); onUpdate?.(localCard); }
+                                if (e.key === 'Escape') { setIsEditingTitle(false); setLocalCard(card); }
+                            }}
+                            className="text-2xl font-bold text-white-smoke font-heading bg-transparent outline-none border-b-2 border-orange-brand w-full"
+                        />
+                    ) : (
+                        <h2
+                            className="text-2xl font-bold text-white-smoke font-heading cursor-pointer hover:text-orange-brand flex items-center gap-2"
+                            onClick={() => setIsEditingTitle(true)}
+                        >
+                            {localCard.title}
+                            <Edit2 className="w-4 h-4 opacity-0 group-hover:opacity-100" />
+                        </h2>
+                    )}
                     <button onClick={onClose}>
                         <X className="w-6 h-6 text-white-smoke/40 hover:text-white-smoke" />
                     </button>
@@ -200,9 +364,52 @@ const CardModal = ({ card, onClose, onUpdate, teamMembers }) => {
                         <textarea
                             className="w-full bg-cyan-blue/50 p-3 rounded-lg text-white-smoke/80 text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
                             rows={3}
-                            defaultValue={localCard.description}
+                            value={localCard.description || ''}
+                            onChange={(e) => updateCard({ description: e.target.value })}
                             placeholder="Add a description..."
                         />
+                    </div>
+
+                    {/* Format & Dates Row */}
+                    <div className="grid grid-cols-3 gap-4">
+                        <div>
+                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
+                                Format
+                            </label>
+                            <select
+                                value={localCard.format || 'Task'}
+                                onChange={(e) => updateCard({ format: e.target.value })}
+                                className="w-full bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5"
+                            >
+                                <option value="Task">Task</option>
+                                <option value="Reel">Reel</option>
+                                <option value="Video">Video</option>
+                                <option value="Story">Story</option>
+                                <option value="Post">Post</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
+                                Start Date
+                            </label>
+                            <input
+                                type="date"
+                                value={localCard.startDate || ''}
+                                onChange={(e) => updateCard({ startDate: e.target.value })}
+                                className="w-full bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
+                                Due Date
+                            </label>
+                            <input
+                                type="date"
+                                value={localCard.dueDate || ''}
+                                onChange={(e) => updateCard({ dueDate: e.target.value })}
+                                className="w-full bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5"
+                            />
+                        </div>
                     </div>
 
                     {/* Assignee */}
@@ -214,6 +421,7 @@ const CardModal = ({ card, onClose, onUpdate, teamMembers }) => {
                             {teamMembers?.map(member => (
                                 <button
                                     key={member}
+                                    onClick={() => handleAssign(member)}
                                     className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${localCard.assignee === member
                                             ? 'bg-orange-brand text-white-smoke border-orange-brand'
                                             : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
@@ -234,25 +442,55 @@ const CardModal = ({ card, onClose, onUpdate, teamMembers }) => {
                             {localCard.checklists?.map(item => (
                                 <div
                                     key={item.id}
-                                    className="flex items-center gap-3 p-2 hover:bg-white-smoke/5 rounded-lg cursor-pointer"
-                                    onClick={() => toggleChecklist(item.id)}
+                                    className="flex items-center gap-3 p-2 hover:bg-white-smoke/5 rounded-lg group"
                                 >
-                                    <button className={`${item.checked ? 'text-orange-brand' : 'text-white-smoke/20'}`}>
+                                    <button
+                                        onClick={() => toggleChecklist(item.id)}
+                                        className={`${item.checked ? 'text-orange-brand' : 'text-white-smoke/20'}`}
+                                    >
                                         {item.checked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                                     </button>
-                                    <span className={`text-sm ${item.checked ? 'text-white-smoke/40 line-through' : 'text-white-smoke/80'}`}>
+                                    <span className={`text-sm flex-1 ${item.checked ? 'text-white-smoke/40 line-through' : 'text-white-smoke/80'}`}>
                                         {item.label}
                                     </span>
+                                    <button
+                                        onClick={() => deleteChecklistItem(item.id)}
+                                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
                                 </div>
                             ))}
-                            <button className="flex items-center gap-2 text-xs text-orange-brand mt-2 hover:underline">
-                                <Plus className="w-3 h-3" /> Add Item
-                            </button>
+
+                            {/* Add Checklist Item */}
+                            <div className="flex items-center gap-2 mt-2">
+                                <input
+                                    type="text"
+                                    value={newChecklistItem}
+                                    onChange={(e) => setNewChecklistItem(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && addChecklistItem()}
+                                    placeholder="Add checklist item..."
+                                    className="flex-1 bg-cyan-blue/30 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
+                                />
+                                <button
+                                    onClick={addChecklistItem}
+                                    className="p-2 bg-orange-brand/20 text-orange-brand rounded-lg hover:bg-orange-brand/30"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-4 border-t border-white-smoke/5 bg-cyan-blue/30 flex justify-end gap-3">
+                {/* Footer */}
+                <div className="p-4 border-t border-white-smoke/5 bg-cyan-blue/30 flex justify-between">
+                    <button
+                        onClick={() => { onDelete?.(localCard.id); onClose(); }}
+                        className="px-4 py-2 text-red-400 hover:bg-red-500/10 rounded-lg text-sm font-medium flex items-center gap-2"
+                    >
+                        <Trash2 className="w-4 h-4" /> Delete Card
+                    </button>
                     <button
                         onClick={onClose}
                         className="px-4 py-2 bg-white-smoke/10 text-white-smoke rounded-lg text-sm font-medium hover:bg-white-smoke/20"
@@ -266,7 +504,7 @@ const CardModal = ({ card, onClose, onUpdate, teamMembers }) => {
 };
 
 /**
- * ProductionBoard - Drag-and-drop Kanban board for production tracking
+ * ProductionBoard - Full-featured Kanban board for production tracking
  */
 const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
     const [items, setItems] = useState(initialItems || []);
@@ -277,7 +515,7 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8, // Prevent accidental drags
+                distance: 8,
             },
         }),
         useSensor(KeyboardSensor, {
@@ -302,7 +540,7 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
         const overId = over.id;
 
         const activeColumn = findColumn(activeId);
-        const overColumn = findColumn(overId) || overId; // overId could be a column id
+        const overColumn = findColumn(overId) || overId;
 
         if (activeColumn !== overColumn && columns.includes(overColumn)) {
             setItems(items => items.map(item =>
@@ -327,7 +565,6 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
             setItems(items => {
                 const newItems = arrayMove(items, activeIndex, overIndex);
 
-                // Generate new rank for the moved item
                 const movedItem = newItems.find(i => i.id === activeId);
                 const sameColumnItems = newItems.filter(i => i.stage === movedItem.stage);
                 const movedIndex = sameColumnItems.findIndex(i => i.id === activeId);
@@ -336,7 +573,6 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                 const afterRank = sameColumnItems[movedIndex + 1]?.rank;
                 movedItem.rank = generateRank(beforeRank, afterRank);
 
-                // Callback for persistence
                 onUpdate?.(newItems);
 
                 return newItems;
@@ -352,20 +588,39 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
             .sort((a, b) => (a.rank || '').localeCompare(b.rank || ''));
     };
 
-    const handleAddCard = (columnId) => {
+    const handleAddCard = (columnId, title) => {
         const columnCards = getColumnCards(columnId);
         const lastRank = columnCards[columnCards.length - 1]?.rank;
 
         const newCard = {
             id: `card-${Date.now()}`,
-            title: 'New Card',
+            title: title,
             stage: columnId,
             format: 'Task',
             rank: generateRank(lastRank, null),
-            checklists: []
+            checklists: [],
+            description: '',
+            assignee: null,
+            startDate: null,
+            dueDate: null
         };
 
-        setItems([...items, newCard]);
+        const newItems = [...items, newCard];
+        setItems(newItems);
+        onUpdate?.(newItems);
+    };
+
+    const handleUpdateCard = (updatedCard) => {
+        const newItems = items.map(i => i.id === updatedCard.id ? updatedCard : i);
+        setItems(newItems);
+        setSelectedCard(updatedCard);
+        onUpdate?.(newItems);
+    };
+
+    const handleDeleteCard = (cardId) => {
+        const newItems = items.filter(i => i.id !== cardId);
+        setItems(newItems);
+        onUpdate?.(newItems);
     };
 
     return (
@@ -385,11 +640,10 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                             title={col}
                             cards={getColumnCards(col)}
                             onCardClick={setSelectedCard}
-                            onAddCard={() => handleAddCard(col)}
+                            onAddCard={(title) => handleAddCard(col, title)}
                         />
                     ))}
 
-                    {/* Add Column Button */}
                     <div className="w-80 flex-shrink-0">
                         <button className="w-full h-12 flex items-center justify-center gap-2 bg-white-smoke/5 text-white-smoke/40 rounded-xl hover:bg-white-smoke/10 hover:text-white-smoke transition-all">
                             <Plus className="w-5 h-5" /> Add List
@@ -397,7 +651,6 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                     </div>
                 </div>
 
-                {/* Drag Overlay */}
                 <DragOverlay>
                     {activeCard ? (
                         <div className="bg-onyx p-4 rounded-xl border-2 border-orange-brand shadow-2xl opacity-90 w-72">
@@ -410,14 +663,12 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                 </DragOverlay>
             </DndContext>
 
-            {/* Card Modal */}
             {selectedCard && (
                 <CardModal
                     card={selectedCard}
                     onClose={() => setSelectedCard(null)}
-                    onUpdate={(updated) => {
-                        setItems(items.map(i => i.id === updated.id ? updated : i));
-                    }}
+                    onUpdate={handleUpdateCard}
+                    onDelete={handleDeleteCard}
                     teamMembers={teamMembers}
                 />
             )}

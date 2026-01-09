@@ -23,11 +23,16 @@ const AuthenticationLayer = ({ onLogin }) => {
         checkSession();
 
         // Listen for auth state changes (for magic link redirects)
-        const { data: { subscription } } = supabase?.onAuthStateChange(async (event, session) => {
+        // Only set up listener if Supabase is configured
+        if (!isSupabaseConfigured() || !supabase) {
+            return;
+        }
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' && session) {
                 await handleSessionLogin(session);
             }
-        }) || { data: { subscription: null } };
+        });
 
         return () => subscription?.unsubscribe();
     }, []);
