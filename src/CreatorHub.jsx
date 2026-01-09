@@ -274,9 +274,43 @@ const BoardsModule = ({ userRole }) => {
             <div className="flex-shrink-0">
                 <div className="flex items-center justify-between mb-3">
                     <h1 className="text-white-smoke font-heading text-3xl font-bold">Boards</h1>
+                </div>
 
-                    {/* Kanban/Timeline Toggle - Only for Production */}
-                    {activeTab === 'production' && (
+                {/* Production / Inspiration Tabs - Below Title */}
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => setActiveTab('production')}
+                        className={`relative px-4 py-2 text-sm font-medium transition-all ${activeTab === 'production'
+                            ? 'text-orange-brand'
+                            : 'text-white-smoke/40 hover:text-white-smoke/60'
+                            }`}
+                    >
+                        Production
+                        {activeTab === 'production' && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-brand rounded-full" />
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('inspiration')}
+                        className={`relative px-4 py-2 text-sm font-medium transition-all ${activeTab === 'inspiration'
+                            ? 'text-violet-brand'
+                            : 'text-white-smoke/40 hover:text-white-smoke/60'
+                            }`}
+                    >
+                        Inspiration
+                        {activeTab === 'inspiration' && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-brand rounded-full" />
+                        )}
+                    </button>
+                    <div className="flex-1 h-px bg-white-smoke/10" />
+                </div>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 min-h-0 flex flex-col">
+                {/* Kanban/Timeline Toggle - Inside Production content */}
+                {activeTab === 'production' && (
+                    <div className="flex items-center justify-end mb-3 flex-shrink-0">
                         <div className="bg-onyx p-1 rounded-lg flex border border-white-smoke/5">
                             <button
                                 onClick={() => setProductionView('kanban')}
@@ -291,63 +325,35 @@ const BoardsModule = ({ userRole }) => {
                                 Timeline
                             </button>
                         </div>
+                    </div>
+                )}
+
+                <div className="flex-1 min-h-0">
+                    {activeTab === 'production' ? (
+                        productionView === 'kanban' ? (
+                            <ProductionBoard
+                                initialItems={productionItems}
+                                teamMembers={TEAM_MEMBERS}
+                                onUpdate={setProductionItems}
+                            />
+                        ) : (
+                            <TimelineView
+                                items={productionItems}
+                                onCardClick={(card) => {
+                                    setSelectedCardForTimeline(card);
+                                    setProductionView('kanban');
+                                }}
+                                onUpdateCard={(updatedCard) => {
+                                    setProductionItems(items =>
+                                        items.map(i => i.id === updatedCard.id ? updatedCard : i)
+                                    );
+                                }}
+                            />
+                        )
+                    ) : (
+                        <InspirationView />
                     )}
                 </div>
-
-                {/* Production / Inspiration Tabs - Below Title */}
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => setActiveTab('production')}
-                        className={`relative px-4 py-2 text-sm font-medium transition-all ${activeTab === 'production'
-                                ? 'text-orange-brand'
-                                : 'text-white-smoke/40 hover:text-white-smoke/60'
-                            }`}
-                    >
-                        Production
-                        {activeTab === 'production' && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-brand rounded-full" />
-                        )}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('inspiration')}
-                        className={`relative px-4 py-2 text-sm font-medium transition-all ${activeTab === 'inspiration'
-                                ? 'text-violet-brand'
-                                : 'text-white-smoke/40 hover:text-white-smoke/60'
-                            }`}
-                    >
-                        Inspiration
-                        {activeTab === 'inspiration' && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-brand rounded-full" />
-                        )}
-                    </button>
-                    <div className="flex-1 h-px bg-white-smoke/10" />
-                </div>
-            </div>
-            <div className="flex-1 min-h-0">
-                {activeTab === 'production' ? (
-                    productionView === 'kanban' ? (
-                        <ProductionBoard
-                            initialItems={productionItems}
-                            teamMembers={TEAM_MEMBERS}
-                            onUpdate={setProductionItems}
-                        />
-                    ) : (
-                        <TimelineView
-                            items={productionItems}
-                            onCardClick={(card) => {
-                                setSelectedCardForTimeline(card);
-                                setProductionView('kanban');
-                            }}
-                            onUpdateCard={(updatedCard) => {
-                                setProductionItems(items =>
-                                    items.map(i => i.id === updatedCard.id ? updatedCard : i)
-                                );
-                            }}
-                        />
-                    )
-                ) : (
-                    <InspirationView />
-                )}
             </div>
         </div>
     );
