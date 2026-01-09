@@ -99,8 +99,8 @@ export const PRODUCTION_ITEMS = [
         reviewer: 'Keanu',
         revision: 1,
         stageHistory: [],
-        // Complexity fields
-        assetCount: 12, // Scenes/shots
+        // Complexity fields - CLIENT WORK (HIGH COMPLEXITY ~7-8)
+        assetCount: 8, // Scenes/shots
         technicalLevel: 4, // 1-5 scale (AI/VFX needs)
         dependencies: [], // Blocked by / blocks
         timeSpent: 180, // Minutes tracked
@@ -117,7 +117,7 @@ export const PRODUCTION_ITEMS = [
         title: 'Higgsfield Tutorial - Identity Synthesis',
         stage: 'production',
         assignee: 'Jordan', // Project Lead
-        collaborators: ['Alex'], // Team members
+        collaborators: [], // Solo project for tutorial
         startDate: '2026-01-10',
         dueDate: '2026-01-18',
         format: 'long-form',
@@ -125,11 +125,9 @@ export const PRODUCTION_ITEMS = [
         urgency: 'medium',
         description: 'Deep dive tutorial following the new workflow.',
         checklists: [
-            { id: 'qa1', label: 'Color grading matches brand palette', checked: true },
-            { id: 'qa2', label: 'Audio levels normalized', checked: true },
-            { id: 'qa3', label: 'Branding placement verified', checked: false },
-            { id: 'qa4', label: 'Screen recordings captured', checked: true },
-            { id: 'qa5', label: 'Voiceover recorded', checked: false }
+            { id: 'qa1', label: 'Screen recordings captured', checked: true },
+            { id: 'qa2', label: 'Voiceover recorded', checked: false },
+            { id: 'qa3', label: 'Final edit', checked: false }
         ],
         // Pipeline fields
         stageStatus: 'review',
@@ -138,10 +136,10 @@ export const PRODUCTION_ITEMS = [
         stageHistory: [
             { stage: 'scripting', approvedBy: 'Keanu', date: '2026-01-09', revision: 1 }
         ],
-        // Complexity fields
-        assetCount: 24,
-        technicalLevel: 3,
-        dependencies: [{ cardId: 1, type: 'blocked_by' }],
+        // Complexity fields - TUTORIAL (LARGE ~5-6)
+        assetCount: 4,
+        technicalLevel: 2,
+        dependencies: [],
         timeSpent: 420,
         thumbnail: null,
         // Activity/Comments
@@ -157,18 +155,16 @@ export const PRODUCTION_ITEMS = [
         title: 'BTS - Studio Session',
         stage: 'qa',
         assignee: 'Sarah', // Project Lead
-        collaborators: [], // Solo project
-        startDate: '2026-01-12',
+        collaborators: [], // Solo quick project
+        startDate: '2026-01-13',
         dueDate: '2026-01-14',
         format: 'bts-short',
         client: null,
         urgency: 'low',
         description: 'Quick behind-the-scenes of the studio setup process.',
         checklists: [
-            { id: 'bts1', label: 'Raw footage review', checked: true },
-            { id: 'bts2', label: 'Highlight selection', checked: true },
-            { id: 'bts3', label: 'Quick edit', checked: false },
-            { id: 'bts4', label: 'Music sync', checked: false }
+            { id: 'bts1', label: 'Select highlights', checked: true },
+            { id: 'bts2', label: 'Quick edit', checked: false }
         ],
         // Pipeline fields
         stageStatus: 'not_started',
@@ -178,9 +174,9 @@ export const PRODUCTION_ITEMS = [
             { stage: 'scripting', approvedBy: 'Keanu', date: '2026-01-10', revision: 1 },
             { stage: 'production', approvedBy: 'Keanu', date: '2026-01-11', revision: 2 }
         ],
-        // Complexity fields
-        assetCount: 6,
-        technicalLevel: 2,
+        // Complexity fields - BTS (LOW COMPLEXITY ~2-3)
+        assetCount: 2,
+        technicalLevel: 1,
         dependencies: [],
         timeSpent: 90,
         thumbnail: null,

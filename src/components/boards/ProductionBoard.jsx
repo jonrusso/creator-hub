@@ -100,11 +100,20 @@ const calculateComplexity = (card) => {
     return Math.min(10, Math.max(1, Math.round(score)));
 };
 
-// Get complexity color based on score
+// Get complexity color based on score - matches T-shirt sizing
 const getComplexityColor = (score) => {
-    if (score <= 3) return 'text-green-400 bg-green-500/20';
-    if (score <= 6) return 'text-yellow-400 bg-yellow-500/20';
-    return 'text-red-400 bg-red-500/20';
+    if (score <= 2) return 'text-sky-400 bg-sky-500/20 border-sky-500/30';      // S - light blue
+    if (score <= 4) return 'text-green-400 bg-green-500/20 border-green-500/30'; // M - green
+    if (score <= 7) return 'text-amber-400 bg-amber-500/20 border-amber-500/30'; // L - amber
+    return 'text-purple-400 bg-purple-500/20 border-purple-500/30';              // XL - purple
+};
+
+// Get complexity label based on score - T-shirt sizing (neutral, non-judgmental)
+const getComplexityLabel = (score) => {
+    if (score <= 2) return 'S';
+    if (score <= 4) return 'M';
+    if (score <= 7) return 'L';
+    return 'XL';
 };
 
 // Keyboard shortcuts config
@@ -321,9 +330,11 @@ const SortableCard = ({ card, onClick, onStatusChange, isAdmin = true }) => {
                             {(() => {
                                 const complexity = calculateComplexity(card);
                                 return (
-                                    <div className={`text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1 font-bold ${getComplexityColor(complexity)}`}>
-                                        <Hexagon className="w-2.5 h-2.5" />
-                                        {complexity}/10
+                                    <div
+                                        className={`text-[9px] px-1.5 py-0.5 rounded border flex items-center gap-1 font-bold ${getComplexityColor(complexity)}`}
+                                        title={`Size: ${getComplexityLabel(complexity)} (based on scope, deliverables, and team)`}
+                                    >
+                                        {getComplexityLabel(complexity)}
                                     </div>
                                 );
                             })()}
@@ -1367,8 +1378,8 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                 <button
                     onClick={() => setFilterMyWork(!filterMyWork)}
                     className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${filterMyWork
-                            ? 'bg-orange-brand text-white-smoke'
-                            : 'bg-onyx border border-white-smoke/10 text-white-smoke/60 hover:text-white-smoke'
+                        ? 'bg-orange-brand text-white-smoke'
+                        : 'bg-onyx border border-white-smoke/10 text-white-smoke/60 hover:text-white-smoke'
                         }`}
                 >
                     <UserIcon className="w-3.5 h-3.5" />
