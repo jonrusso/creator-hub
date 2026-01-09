@@ -10,7 +10,7 @@ import {
 import { Logo, GlassCard, Input, Button } from './components/common';
 import { AuthenticationLayer } from './components/auth';
 import TeamModule from './components/TeamModule';
-import { ProductionBoard } from './components/boards';
+import { ProductionBoard, TimelineView } from './components/boards';
 import { WORKFLOWS_DB, PRODUCTION_ITEMS, INSPIRATION_ITEMS, TEAM_MEMBERS } from './services/mock';
 import { supabase, isSupabaseConfigured } from './services/supabase/client';
 
@@ -228,6 +228,9 @@ const WorkflowsModule = ({ userRole }) => {
 // ==================== BOARDS MODULE (V3: Trello-style + Inspiration) ====================
 const BoardsModule = ({ userRole }) => {
     const [activeTab, setActiveTab] = useState('production');
+    const [productionView, setProductionView] = useState('kanban'); // 'kanban' | 'timeline'
+    const [productionItems, setProductionItems] = useState(PRODUCTION_ITEMS);
+    const [selectedCardForTimeline, setSelectedCardForTimeline] = useState(null);
 
     // Inspiration View (Denser Grid + Accounts)
     const InspirationView = () => {
@@ -272,17 +275,48 @@ const BoardsModule = ({ userRole }) => {
                     <h1 className="text-white-smoke font-heading text-3xl font-bold mb-1">Boards</h1>
                     <p className="text-white-smoke/60 font-body text-sm">Production Pipeline & Inspiration</p>
                 </div>
-                <div className="bg-onyx p-1 rounded-xl flex border border-white-smoke/5">
-                    <button onClick={() => setActiveTab('production')} className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'production' ? 'bg-white-smoke/10 text-white-smoke' : 'text-white-smoke/60'}`}>Production</button>
-                    <button onClick={() => setActiveTab('inspiration')} className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'inspiration' ? 'bg-violet-brand/20 text-violet-brand shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'text-white-smoke/60'}`}>Inspiration</button>
+                <div className="flex items-center gap-3">
+                    {/* View Toggle for Production */}
+                    {activeTab === 'production' && (
+                        <div className="bg-onyx p-1 rounded-lg flex border border-white-smoke/5">
+                            <button
+                                onClick={() => setProductionView('kanban')}
+                                className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${productionView === 'kanban' ? 'bg-orange-brand/20 text-orange-brand' : 'text-white-smoke/40 hover:text-white-smoke/60'}`}
+                            >
+                                Kanban
+                            </button>
+                            <button
+                                onClick={() => setProductionView('timeline')}
+                                className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${productionView === 'timeline' ? 'bg-orange-brand/20 text-orange-brand' : 'text-white-smoke/40 hover:text-white-smoke/60'}`}
+                            >
+                                Timeline
+                            </button>
+                        </div>
+                    )}
+                    {/* Tab Toggle */}
+                    <div className="bg-onyx p-1 rounded-xl flex border border-white-smoke/5">
+                        <button onClick={() => setActiveTab('production')} className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'production' ? 'bg-white-smoke/10 text-white-smoke' : 'text-white-smoke/60'}`}>Production</button>
+                        <button onClick={() => setActiveTab('inspiration')} className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'inspiration' ? 'bg-violet-brand/20 text-violet-brand shadow-[0_0_15px_rgba(139,92,246,0.3)]' : 'text-white-smoke/60'}`}>Inspiration</button>
+                    </div>
                 </div>
             </div>
             <div className="flex-1 min-h-0">
                 {activeTab === 'production' ? (
-                    <ProductionBoard
-                        initialItems={PRODUCTION_ITEMS}
-                        teamMembers={TEAM_MEMBERS}
-                    />
+                    productionView === 'kanban' ? (
+                        <ProductionBoard
+                            initialItems={productionItems}
+                            teamMembers={TEAM_MEMBERS}
+                            onUpdate={setProductionItems}
+                        />
+                    ) : (
+                        <TimelineView
+                            items={productionItems}
+                            onCardClick={(card) => {
+                                setSelectedCardForTimeline(card);
+                                setProductionView('kanban'); // Switch back to kanban to edit
+                            }}
+                        />
+                    )
                 ) : (
                     <InspirationView />
                 )}
