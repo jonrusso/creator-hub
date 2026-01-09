@@ -457,7 +457,185 @@ const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard, onStatusCha
     );
 };
 
-// Enhanced Card Detail Modal
+// Stage Timeline Component - Visual Pipeline Progress
+const StageTimeline = ({ currentStage, stageStatus, stageHistory }) => {
+    const stages = ['scripting', 'production', 'qa', 'done'];
+    const stageLabels = { scripting: 'Script', production: 'Production', qa: 'QA', done: 'Done' };
+
+    const getStageState = (stage) => {
+        const currentIdx = stages.indexOf(currentStage);
+        const stageIdx = stages.indexOf(stage);
+
+        if (stageIdx < currentIdx) return 'completed';
+        if (stageIdx === currentIdx) return stageStatus;
+        return 'pending';
+    };
+
+    const getHistoryForStage = (stage) => {
+        return stageHistory?.find(h => h.stage === stage);
+    };
+
+    return (
+        <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
+            <h3 className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-4">Pipeline Progress</h3>
+            <div className="flex items-start justify-between gap-2">
+                {stages.map((stage, idx) => {
+                    const state = getStageState(stage);
+                    const history = getHistoryForStage(stage);
+                    const isLast = idx === stages.length - 1;
+
+                    return (
+                        <div key={stage} className="flex items-center flex-1">
+                            <div className="flex flex-col items-center flex-1">
+                                {/* Stage Circle */}
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold border-2 ${state === 'completed' ? 'bg-emerald-500/30 border-emerald-500 text-emerald-400' :
+                                    state === 'approved' ? 'bg-emerald-500/30 border-emerald-500 text-emerald-400' :
+                                        state === 'in_progress' ? 'bg-blue-500/30 border-blue-500 text-blue-400' :
+                                            state === 'review' ? 'bg-amber-500/30 border-amber-500 text-amber-400' :
+                                                state === 'not_started' && stage === currentStage ? 'bg-slate-500/30 border-slate-400 text-slate-400' :
+                                                    'bg-white-smoke/5 border-white-smoke/20 text-white-smoke/30'
+                                    }`}>
+                                    {state === 'completed' ? '✓' :
+                                        state === 'approved' ? '✓' :
+                                            state === 'in_progress' ? '◐' :
+                                                state === 'review' ? '◉' : '○'}
+                                </div>
+
+                                {/* Stage Label */}
+                                <span className={`text-[10px] font-bold uppercase mt-2 ${state === 'completed' || state === 'approved' ? 'text-emerald-400' :
+                                    state === 'in_progress' ? 'text-blue-400' :
+                                        state === 'review' ? 'text-amber-400' :
+                                            state === 'not_started' && stage === currentStage ? 'text-slate-400' :
+                                                'text-white-smoke/30'
+                                    }`}>
+                                    {stageLabels[stage]}
+                                </span>
+
+                                {/* History Info */}
+                                {history && (
+                                    <div className="text-[9px] text-white-smoke/40 mt-1 text-center">
+                                        <div>REV {history.revision}</div>
+                                        <div>{history.date}</div>
+                                    </div>
+                                )}
+
+                                {/* Current Stage Status */}
+                                {stage === currentStage && state !== 'completed' && (
+                                    <div className="text-[9px] text-white-smoke/40 mt-1">
+                                        {STATUS_CONFIG[stageStatus]?.label || 'Pending'}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Connector Line */}
+                            {!isLast && (
+                                <div className={`flex-shrink-0 h-0.5 w-8 -mt-6 ${getStageState(stages[idx + 1]) !== 'pending'
+                                    ? 'bg-emerald-500/50'
+                                    : 'bg-white-smoke/10'
+                                    }`} />
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+// Team Activity Component - Comments and Status Changes
+const TeamActivity = ({ activity = [], onAddComment }) => {
+    const [newComment, setNewComment] = useState('');
+
+    const formatTime = (timestamp) => {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = Math.floor((now - date) / (1000 * 60 * 60));
+        if (diff < 1) return 'Just now';
+        if (diff < 24) return `${diff}h ago`;
+        const days = Math.floor(diff / 24);
+        return `${days}d ago`;
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!newComment.trim()) return;
+        onAddComment?.(newComment.trim());
+        setNewComment('');
+    };
+
+    const sortedActivity = [...activity].sort((a, b) =>
+        new Date(b.timestamp) - new Date(a.timestamp)
+    );
+
+    return (
+        <div className="bg-cyan-blue/30 rounded-xl border border-white-smoke/5 flex flex-col h-full">
+            <div className="p-3 border-b border-white-smoke/5">
+                <h3 className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold">Team Activity</h3>
+            </div>
+
+            {/* Activity List */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
+                {sortedActivity.length === 0 ? (
+                    <div className="text-center text-white-smoke/30 text-xs py-8">
+                        No activity yet. Be the first to comment!
+                    </div>
+                ) : (
+                    sortedActivity.map(item => (
+                        <div key={item.id} className="text-sm">
+                            {item.type === 'comment' ? (
+                                <div className="bg-onyx rounded-lg p-3">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-white-smoke font-medium text-xs">{item.author}</span>
+                                        <span className="text-white-smoke/30 text-[10px]">{formatTime(item.timestamp)}</span>
+                                    </div>
+                                    <p className="text-white-smoke/70 text-xs leading-relaxed">{item.content}</p>
+                                </div>
+                            ) : item.type === 'status_change' ? (
+                                <div className="flex items-center gap-2 text-[10px] text-white-smoke/40 py-1">
+                                    <span className="font-medium text-white-smoke/60">{item.author}</span>
+                                    <span>changed status</span>
+                                    <span className="px-1.5 py-0.5 rounded bg-white-smoke/10">{item.from}</span>
+                                    <span>→</span>
+                                    <span className="px-1.5 py-0.5 rounded bg-white-smoke/10">{item.to}</span>
+                                </div>
+                            ) : item.type === 'stage_change' ? (
+                                <div className="flex items-center gap-2 text-[10px] text-white-smoke/40 py-1">
+                                    <span className="font-medium text-emerald-400">{item.author}</span>
+                                    <span>approved</span>
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">{item.from}</span>
+                                    <span>→</span>
+                                    <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">{item.to}</span>
+                                </div>
+                            ) : null}
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Add Comment */}
+            <form onSubmit={handleSubmit} className="p-3 border-t border-white-smoke/5">
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="flex-1 bg-onyx p-2 rounded-lg text-white-smoke text-xs outline-none border border-white-smoke/10 focus:border-orange-brand/50"
+                    />
+                    <button
+                        type="submit"
+                        disabled={!newComment.trim()}
+                        className="px-3 py-2 bg-orange-brand/20 text-orange-brand rounded-lg text-xs font-medium hover:bg-orange-brand/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Send
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+};
+
+// Enhanced Card Detail Modal - Professional Full-Screen
 const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
     const [localCard, setLocalCard] = useState(card);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -523,255 +701,306 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
         updateCard({ assignee: localCard.assignee === member ? null : member });
     };
 
+    // Add comment handler
+    const handleAddComment = (content) => {
+        const newActivity = {
+            id: `act-${Date.now()}`,
+            type: 'comment',
+            author: 'You', // TODO: Get from auth context
+            timestamp: new Date().toISOString(),
+            content
+        };
+        updateCard({
+            activity: [...(localCard.activity || []), newActivity]
+        });
+    };
+
+    // Status info
+    const stageStatus = localCard.stageStatus || 'not_started';
+    const statusInfo = STATUS_CONFIG[stageStatus] || STATUS_CONFIG.not_started;
+    const format = VIDEO_FORMATS.find(f => f.id === localCard.format) || VIDEO_FORMATS[0];
+
+    // Days remaining
+    const getDaysRemaining = () => {
+        if (!localCard.dueDate) return null;
+        const today = new Date();
+        const due = new Date(localCard.dueDate);
+        return Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+    };
+    const daysLeft = getDaysRemaining();
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-onyx w-full max-w-2xl rounded-2xl border border-white-smoke/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                {/* Header */}
-                <div className="p-6 border-b border-white-smoke/5 flex justify-between items-start">
-                    {isEditingTitle ? (
-                        <input
-                            ref={titleInputRef}
-                            type="text"
-                            value={localCard.title}
-                            onChange={(e) => setLocalCard({ ...localCard, title: e.target.value })}
-                            onBlur={() => { setIsEditingTitle(false); onUpdate?.(localCard); }}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') { setIsEditingTitle(false); onUpdate?.(localCard); }
-                                if (e.key === 'Escape') { setIsEditingTitle(false); setLocalCard(card); }
-                            }}
-                            className="text-2xl font-bold text-white-smoke font-heading bg-transparent outline-none border-b-2 border-orange-brand w-full"
-                        />
-                    ) : (
-                        <h2
-                            className="text-2xl font-bold text-white-smoke font-heading cursor-pointer hover:text-orange-brand flex items-center gap-2"
-                            onClick={() => setIsEditingTitle(true)}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
+            <div className="bg-onyx w-full max-w-6xl h-[90vh] rounded-2xl border border-white-smoke/10 shadow-2xl overflow-hidden flex flex-col">
+
+                {/* Header - Professional with Status */}
+                <div className="p-4 border-b border-white-smoke/10 bg-cyan-blue/20 flex items-center justify-between flex-shrink-0">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <button
+                            onClick={onClose}
+                            className="p-2 text-white-smoke/40 hover:text-white-smoke hover:bg-white-smoke/10 rounded-lg transition-all"
                         >
-                            {localCard.title}
-                            <Edit2 className="w-4 h-4 opacity-0 group-hover:opacity-100" />
-                        </h2>
-                    )}
-                    <button onClick={onClose}>
-                        <X className="w-6 h-6 text-white-smoke/40 hover:text-white-smoke" />
-                    </button>
+                            <ChevronRight className="w-5 h-5 rotate-180" />
+                        </button>
+
+                        <div className="flex-1 min-w-0">
+                            {isEditingTitle ? (
+                                <input
+                                    ref={titleInputRef}
+                                    type="text"
+                                    value={localCard.title}
+                                    onChange={(e) => setLocalCard({ ...localCard, title: e.target.value })}
+                                    onBlur={() => { setIsEditingTitle(false); onUpdate?.(localCard); }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') { setIsEditingTitle(false); onUpdate?.(localCard); }
+                                        if (e.key === 'Escape') { setIsEditingTitle(false); setLocalCard(card); }
+                                    }}
+                                    className="text-xl font-bold text-white-smoke font-heading bg-transparent outline-none border-b-2 border-orange-brand w-full"
+                                />
+                            ) : (
+                                <h2
+                                    className="text-xl font-bold text-white-smoke font-heading cursor-pointer hover:text-orange-brand truncate"
+                                    onClick={() => setIsEditingTitle(true)}
+                                >
+                                    {localCard.title}
+                                </h2>
+                            )}
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {localCard.client && (
+                                    <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium">
+                                        {localCard.client}
+                                    </span>
+                                )}
+                                <span className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 font-medium ${format.color}`}>
+                                    {localCard.format || 'Long-Form'}
+                                </span>
+                                {localCard.assignee && (
+                                    <span className="text-[10px] text-white-smoke/50">
+                                        @{localCard.assignee}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        {/* Status Badge */}
+                        <div className={`px-3 py-1.5 rounded-lg text-xs font-bold ${statusInfo.color} border border-current/30`}>
+                            {statusInfo.icon} {statusInfo.label}
+                        </div>
+
+                        {/* Days Remaining */}
+                        {daysLeft !== null && localCard.stage !== 'done' && (
+                            <div className={`px-3 py-1.5 rounded-lg text-xs font-bold ${daysLeft < 0 ? 'bg-red-500/20 text-red-400' :
+                                    daysLeft <= 2 ? 'bg-amber-500/20 text-amber-400' :
+                                        'bg-white-smoke/10 text-white-smoke/60'
+                                }`}>
+                                {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}
+                            </div>
+                        )}
+
+                        <button onClick={onClose} className="p-2 text-white-smoke/40 hover:text-white-smoke hover:bg-white-smoke/10 rounded-lg">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
-                <div className="p-6 overflow-y-auto space-y-6">
-                    {/* Description */}
-                    <div>
-                        <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
-                            Description
-                        </label>
-                        <textarea
-                            className="w-full bg-cyan-blue/50 p-3 rounded-lg text-white-smoke/80 text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
-                            rows={3}
-                            value={localCard.description || ''}
-                            onChange={(e) => updateCard({ description: e.target.value })}
-                            placeholder="Add a description..."
-                        />
-                    </div>
+                {/* Two-Column Content */}
+                <div className="flex-1 flex overflow-hidden">
 
-                    {/* Client & Format Row */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
-                                Client
+                    {/* Left Column - Project Details (60%) */}
+                    <div className="w-3/5 overflow-y-auto p-6 space-y-6 border-r border-white-smoke/5">
+
+                        {/* Stage Timeline */}
+                        <StageTimeline
+                            currentStage={localCard.stage}
+                            stageStatus={stageStatus}
+                            stageHistory={localCard.stageHistory || []}
+                        />
+
+                        {/* Description */}
+                        <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
+                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-3 block">
+                                Description
                             </label>
-                            <input
-                                type="text"
-                                value={localCard.client || ''}
-                                onChange={(e) => updateCard({ client: e.target.value })}
-                                placeholder="Enter client name..."
-                                className="w-full bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
+                            <textarea
+                                className="w-full bg-onyx p-3 rounded-lg text-white-smoke/80 text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50 resize-none"
+                                rows={3}
+                                value={localCard.description || ''}
+                                onChange={(e) => updateCard({ description: e.target.value })}
+                                placeholder="Add a description..."
                             />
                         </div>
-                        <div>
-                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
-                                Format
-                            </label>
-                            <select
-                                value={localCard.format || 'long-form'}
-                                onChange={(e) => updateCard({ format: e.target.value })}
-                                className="w-full bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5"
-                            >
-                                {VIDEO_FORMATS.map(f => (
-                                    <option key={f.id} value={f.id}>{f.label} - {f.description}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
 
-                    {/* Urgency Level */}
-                    <div>
-                        <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
-                            Urgency Level
-                        </label>
-                        <div className="flex gap-2">
-                            {URGENCY_LEVELS.map(level => (
-                                <button
-                                    key={level.id}
-                                    onClick={() => updateCard({ urgency: localCard.urgency === level.id ? null : level.id })}
-                                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${localCard.urgency === level.id
-                                        ? `${level.bgColor} ${level.textColor} border-current`
-                                        : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
-                                        }`}
-                                >
-                                    <div className={`w-2 h-2 rounded-full ${level.color}`}></div>
-                                    {level.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Dates Row */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <DatePicker
-                            label="Start Date"
-                            value={localCard.startDate || ''}
-                            onChange={(date) => updateCard({ startDate: date })}
-                            placeholder="Select start date"
-                        />
-                        <DatePicker
-                            label="Due Date"
-                            value={localCard.dueDate || ''}
-                            onChange={(date) => updateCard({ dueDate: date })}
-                            placeholder="Select due date"
-                        />
-                    </div>
-
-                    {/* Assignee */}
-                    <div>
-                        <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
-                            Assignee
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                            {teamMembers?.map(member => (
-                                <button
-                                    key={member}
-                                    onClick={() => handleAssign(member)}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${localCard.assignee === member
-                                        ? 'bg-orange-brand text-white-smoke border-orange-brand'
-                                        : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
-                                        }`}
-                                >
-                                    {member}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Google Drive Link */}
-                    <div>
-                        <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 flex items-center gap-2">
-                            <FolderOpen className="w-3.5 h-3.5" />
-                            Project Files (Google Drive)
-                        </label>
-                        <div className="flex gap-2">
-                            <input
-                                type="url"
-                                value={localCard.driveLink || ''}
-                                onChange={(e) => updateCard({ driveLink: e.target.value })}
-                                placeholder="https://drive.google.com/..."
-                                className="flex-1 bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
-                            />
-                            {localCard.driveLink && (
-                                <a
-                                    href={localCard.driveLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-3 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 flex items-center gap-1.5 text-xs font-medium"
-                                >
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                    Open
-                                </a>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Script Link */}
-                    <div>
-                        <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 flex items-center gap-2">
-                            <FileText className="w-3.5 h-3.5" />
-                            Script (Google Docs)
-                        </label>
-                        <div className="flex gap-2">
-                            <input
-                                type="url"
-                                value={localCard.scriptLink || ''}
-                                onChange={(e) => updateCard({ scriptLink: e.target.value })}
-                                placeholder="https://docs.google.com/..."
-                                className="flex-1 bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
-                            />
-                            {localCard.scriptLink && (
-                                <a
-                                    href={localCard.scriptLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="px-3 py-2 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 flex items-center gap-1.5 text-xs font-medium"
-                                >
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                    Open
-                                </a>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Checklists */}
-                    <div>
-                        <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
-                            Checklist
-                        </label>
-                        <div className="space-y-2">
-                            {localCard.checklists?.map(item => (
-                                <div
-                                    key={item.id}
-                                    className="flex items-center gap-3 p-2 hover:bg-white-smoke/5 rounded-lg group"
-                                >
-                                    <button
-                                        onClick={() => toggleChecklist(item.id)}
-                                        className={`${item.checked ? 'text-orange-brand' : 'text-white-smoke/20'}`}
-                                    >
-                                        {item.checked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                                    </button>
-                                    <span className={`text-sm flex-1 ${item.checked ? 'text-white-smoke/40 line-through' : 'text-white-smoke/80'}`}>
-                                        {item.label}
-                                    </span>
-                                    <button
-                                        onClick={() => deleteChecklistItem(item.id)}
-                                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
-
-                            {/* Add Checklist Item */}
-                            <div className="flex items-center gap-2 mt-2">
+                        {/* Project Info Grid */}
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* Client & Format */}
+                            <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
+                                <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">Client</label>
                                 <input
                                     type="text"
-                                    value={newChecklistItem}
-                                    onChange={(e) => setNewChecklistItem(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && addChecklistItem()}
-                                    placeholder="Add checklist item..."
-                                    className="flex-1 bg-cyan-blue/30 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
+                                    value={localCard.client || ''}
+                                    onChange={(e) => updateCard({ client: e.target.value })}
+                                    placeholder="Enter client name..."
+                                    className="w-full bg-onyx p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
                                 />
-                                <button
-                                    onClick={addChecklistItem}
-                                    className="p-2 bg-orange-brand/20 text-orange-brand rounded-lg hover:bg-orange-brand/30"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                </button>
                             </div>
+                            <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
+                                <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">Format</label>
+                                <select
+                                    value={localCard.format || 'long-form'}
+                                    onChange={(e) => updateCard({ format: e.target.value })}
+                                    className="w-full bg-onyx p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5"
+                                >
+                                    {VIDEO_FORMATS.map(f => (
+                                        <option key={f.id} value={f.id}>{f.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Urgency Level */}
+                        <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
+                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-3 block">Urgency Level</label>
+                            <div className="flex gap-2">
+                                {URGENCY_LEVELS.map(level => (
+                                    <button
+                                        key={level.id}
+                                        onClick={() => updateCard({ urgency: localCard.urgency === level.id ? null : level.id })}
+                                        className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${localCard.urgency === level.id
+                                                ? `${level.bgColor} ${level.textColor} border-current`
+                                                : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
+                                            }`}
+                                    >
+                                        <div className={`w-2 h-2 rounded-full ${level.color}`}></div>
+                                        {level.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Dates Row */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <DatePicker
+                                label="Start Date"
+                                value={localCard.startDate || ''}
+                                onChange={(date) => updateCard({ startDate: date })}
+                                placeholder="Select start date"
+                            />
+                            <DatePicker
+                                label="Due Date"
+                                value={localCard.dueDate || ''}
+                                onChange={(date) => updateCard({ dueDate: date })}
+                                placeholder="Select due date"
+                            />
+                        </div>
+
+                        {/* Assignee */}
+                        <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
+                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-3 block">Assignee (Project Lead)</label>
+                            <div className="flex flex-wrap gap-2">
+                                {teamMembers?.map(member => (
+                                    <button
+                                        key={member}
+                                        onClick={() => handleAssign(member)}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${localCard.assignee === member
+                                                ? 'bg-orange-brand text-white-smoke border-orange-brand'
+                                                : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
+                                            }`}
+                                    >
+                                        {member}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Deliverables / Checklist */}
+                        <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
+                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-3 block">Deliverables</label>
+                            <div className="space-y-2">
+                                {localCard.checklists?.map(item => (
+                                    <div key={item.id} className="flex items-center gap-3 p-2 hover:bg-onyx/50 rounded-lg group">
+                                        <button onClick={() => toggleChecklist(item.id)} className={`${item.checked ? 'text-orange-brand' : 'text-white-smoke/20'}`}>
+                                            {item.checked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                                        </button>
+                                        <span className={`text-sm flex-1 ${item.checked ? 'text-white-smoke/40 line-through' : 'text-white-smoke/80'}`}>
+                                            {item.label}
+                                        </span>
+                                        <button onClick={() => deleteChecklistItem(item.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                <div className="flex items-center gap-2 mt-2">
+                                    <input
+                                        type="text"
+                                        value={newChecklistItem}
+                                        onChange={(e) => setNewChecklistItem(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && addChecklistItem()}
+                                        placeholder="Add deliverable..."
+                                        className="flex-1 bg-onyx p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
+                                    />
+                                    <button onClick={addChecklistItem} className="p-2 bg-orange-brand/20 text-orange-brand rounded-lg hover:bg-orange-brand/30">
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column - Activity & Links (40%) */}
+                    <div className="w-2/5 flex flex-col overflow-hidden bg-cyan-blue/10">
+
+                        {/* Quick Links */}
+                        <div className="p-4 border-b border-white-smoke/5 flex-shrink-0">
+                            <h3 className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-3">Quick Links</h3>
+                            <div className="flex gap-2">
+                                {localCard.driveLink ? (
+                                    <a href={localCard.driveLink} target="_blank" rel="noopener noreferrer"
+                                        className="flex-1 px-3 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 flex items-center justify-center gap-2 text-xs font-medium">
+                                        <FolderOpen className="w-4 h-4" /> Drive
+                                    </a>
+                                ) : (
+                                    <button onClick={() => {
+                                        const url = prompt('Enter Google Drive link:');
+                                        if (url) updateCard({ driveLink: url });
+                                    }} className="flex-1 px-3 py-2 bg-white-smoke/5 text-white-smoke/40 rounded-lg hover:bg-white-smoke/10 flex items-center justify-center gap-2 text-xs">
+                                        <FolderOpen className="w-4 h-4" /> Add Drive
+                                    </button>
+                                )}
+                                {localCard.scriptLink ? (
+                                    <a href={localCard.scriptLink} target="_blank" rel="noopener noreferrer"
+                                        className="flex-1 px-3 py-2 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 flex items-center justify-center gap-2 text-xs font-medium">
+                                        <FileText className="w-4 h-4" /> Script
+                                    </a>
+                                ) : (
+                                    <button onClick={() => {
+                                        const url = prompt('Enter Script (Google Docs) link:');
+                                        if (url) updateCard({ scriptLink: url });
+                                    }} className="flex-1 px-3 py-2 bg-white-smoke/5 text-white-smoke/40 rounded-lg hover:bg-white-smoke/10 flex items-center justify-center gap-2 text-xs">
+                                        <FileText className="w-4 h-4" /> Add Script
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Team Activity */}
+                        <div className="flex-1 min-h-0">
+                            <TeamActivity
+                                activity={localCard.activity || []}
+                                onAddComment={handleAddComment}
+                            />
                         </div>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-white-smoke/5 bg-cyan-blue/30 flex justify-between">
+                <div className="p-4 border-t border-white-smoke/10 bg-cyan-blue/20 flex justify-between flex-shrink-0">
                     <button
                         onClick={() => { onDelete?.(localCard.id); onClose(); }}
                         className="px-4 py-2 text-red-400 hover:bg-red-500/10 rounded-lg text-sm font-medium flex items-center gap-2"
                     >
-                        <Trash2 className="w-4 h-4" /> Delete Card
+                        <Trash2 className="w-4 h-4" /> Archive
                     </button>
 
                     <div className="flex items-center gap-2">
@@ -783,8 +1012,8 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                                     updateCard({ stage: nextStage });
                                 }}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${getNextStage(localCard.stage) === 'done'
-                                    ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30'
-                                    : 'bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 border border-violet-500/30'
+                                        ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30'
+                                        : 'bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 border border-violet-500/30'
                                     }`}
                             >
                                 <ChevronRight className="w-4 h-4" />

@@ -27,7 +27,13 @@ export const PRODUCTION_ITEMS = [
         stageStatus: 'in_progress',
         reviewer: 'Keanu',
         revision: 1,
-        stageHistory: []
+        stageHistory: [],
+        // Activity/Comments
+        activity: [
+            { id: 'act-1', type: 'comment', author: 'Keanu', timestamp: '2026-01-08T09:00:00Z', content: 'Lets focus on the Gen-2 motion features for the intro 🎬' },
+            { id: 'act-2', type: 'status_change', author: 'Alex', timestamp: '2026-01-08T10:30:00Z', from: 'not_started', to: 'in_progress' },
+            { id: 'act-3', type: 'comment', author: 'Alex', timestamp: '2026-01-08T14:00:00Z', content: 'Script draft is ready for review! Added the key talking points.' }
+        ]
     },
     {
         id: 2,
@@ -51,6 +57,13 @@ export const PRODUCTION_ITEMS = [
         revision: 2,
         stageHistory: [
             { stage: 'scripting', approvedBy: 'Keanu', date: '2026-01-09', revision: 1 }
+        ],
+        // Activity/Comments
+        activity: [
+            { id: 'act-1', type: 'stage_change', author: 'Keanu', timestamp: '2026-01-09T16:00:00Z', from: 'scripting', to: 'production' },
+            { id: 'act-2', type: 'comment', author: 'Jordan', timestamp: '2026-01-10T11:00:00Z', content: 'Started on the edit. The B-roll looks incredible!' },
+            { id: 'act-3', type: 'comment', author: 'Sarah', timestamp: '2026-01-10T15:30:00Z', content: 'Color grading is 🔥 Nice work!' },
+            { id: 'act-4', type: 'status_change', author: 'Jordan', timestamp: '2026-01-11T09:00:00Z', from: 'in_progress', to: 'review' }
         ]
     },
     {
@@ -72,6 +85,12 @@ export const PRODUCTION_ITEMS = [
         stageHistory: [
             { stage: 'scripting', approvedBy: 'Keanu', date: '2026-01-10', revision: 1 },
             { stage: 'production', approvedBy: 'Keanu', date: '2026-01-11', revision: 2 }
+        ],
+        // Activity/Comments
+        activity: [
+            { id: 'act-1', type: 'stage_change', author: 'Keanu', timestamp: '2026-01-10T10:00:00Z', from: 'scripting', to: 'production' },
+            { id: 'act-2', type: 'stage_change', author: 'Keanu', timestamp: '2026-01-11T14:00:00Z', from: 'production', to: 'qa' },
+            { id: 'act-3', type: 'comment', author: 'Keanu', timestamp: '2026-01-11T14:05:00Z', content: 'Great work on this! Ready for final QA checks.' }
         ]
     }
 ];
