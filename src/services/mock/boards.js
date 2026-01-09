@@ -1,4 +1,12 @@
 // Mock Boards Data
+// Stage statuses: 'not_started' | 'in_progress' | 'review' | 'approved'
+export const STAGE_STATUSES = {
+    NOT_STARTED: 'not_started',
+    IN_PROGRESS: 'in_progress',
+    REVIEW: 'review',
+    APPROVED: 'approved'
+};
+
 export const PRODUCTION_ITEMS = [
     {
         id: 1,
@@ -14,7 +22,12 @@ export const PRODUCTION_ITEMS = [
         checklists: [
             { id: 'c1', label: 'Script Draft', checked: true },
             { id: 'c2', label: 'Asset Collection', checked: false }
-        ]
+        ],
+        // Pipeline fields
+        stageStatus: 'in_progress',
+        reviewer: 'Keanu',
+        revision: 1,
+        stageHistory: []
     },
     {
         id: 2,
@@ -31,6 +44,13 @@ export const PRODUCTION_ITEMS = [
             { id: 'qa1', label: 'Color grading matches brand palette', checked: true },
             { id: 'qa2', label: 'Audio levels normalized', checked: true },
             { id: 'qa3', label: 'Branding placement verified', checked: false }
+        ],
+        // Pipeline fields
+        stageStatus: 'review',
+        reviewer: 'Keanu',
+        revision: 2,
+        stageHistory: [
+            { stage: 'scripting', approvedBy: 'Keanu', date: '2026-01-09', revision: 1 }
         ]
     },
     {
@@ -44,7 +64,15 @@ export const PRODUCTION_ITEMS = [
         client: null,
         urgency: 'low',
         description: 'Quick behind-the-scenes of the studio setup process.',
-        checklists: []
+        checklists: [],
+        // Pipeline fields
+        stageStatus: 'not_started',
+        reviewer: 'Keanu',
+        revision: 1,
+        stageHistory: [
+            { stage: 'scripting', approvedBy: 'Keanu', date: '2026-01-10', revision: 1 },
+            { stage: 'production', approvedBy: 'Keanu', date: '2026-01-11', revision: 2 }
+        ]
     }
 ];
 

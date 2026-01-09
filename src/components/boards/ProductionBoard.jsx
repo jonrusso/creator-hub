@@ -39,6 +39,34 @@ const URGENCY_LEVELS = [
     { id: 'low', label: 'Low', color: 'bg-green-500', textColor: 'text-green-400', bgColor: 'bg-green-500/20' },
 ];
 
+// Pipeline Status Config
+const STATUS_CONFIG = {
+    not_started: {
+        label: 'Not Started',
+        color: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+        icon: '○',
+        action: 'Start Work'
+    },
+    in_progress: {
+        label: 'In Progress',
+        color: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        icon: '◐',
+        action: 'Submit for Review'
+    },
+    review: {
+        label: 'In Review',
+        color: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+        icon: '◉',
+        action: 'Approve'
+    },
+    approved: {
+        label: 'Approved',
+        color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+        icon: '●',
+        action: null
+    }
+};
+
 // LexoRank-style fractional ordering helper
 const generateRank = (before, after) => {
     const MIN = 'a';
@@ -92,8 +120,8 @@ const getDateStatus = (dueDate) => {
     return 'normal';
 };
 
-// Sortable Card Component
-const SortableCard = ({ card, onClick }) => {
+// Sortable Card Component - Professional Pipeline Design
+const SortableCard = ({ card, onClick, onStatusChange, isAdmin = true }) => {
     const {
         attributes,
         listeners,
@@ -111,99 +139,148 @@ const SortableCard = ({ card, onClick }) => {
 
     const dateStatus = getDateStatus(card.dueDate);
     const isDone = card.stage === 'done';
+    const stageStatus = card.stageStatus || 'not_started';
+    const statusInfo = STATUS_CONFIG[stageStatus] || STATUS_CONFIG.not_started;
+    const revision = card.revision || 1;
+
+    // Calculate days remaining
+    const getDaysRemaining = () => {
+        if (!card.dueDate) return null;
+        const today = new Date();
+        const due = new Date(card.dueDate);
+        const diff = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+        return diff;
+    };
+    const daysLeft = getDaysRemaining();
+
+    // Handle quick status actions
+    const handleAction = (e) => {
+        e.stopPropagation();
+        if (!onStatusChange) return;
+
+        if (stageStatus === 'not_started') {
+            onStatusChange(card.id, 'in_progress');
+        } else if (stageStatus === 'in_progress') {
+            onStatusChange(card.id, 'review');
+        } else if (stageStatus === 'review') {
+            onStatusChange(card.id, 'approved');
+        }
+    };
 
     return (
         <div
             ref={setNodeRef}
             style={style}
-            className={`p-4 rounded-xl border cursor-pointer shadow-sm group transition-all ${isDone
-                ? 'bg-emerald-900/30 border-emerald-500/30 hover:border-emerald-400/50'
-                : 'bg-onyx border-white-smoke/5 hover:border-orange-brand/40'
+            className={`rounded-xl border overflow-hidden shadow-sm group transition-all ${isDone
+                ? 'bg-emerald-900/20 border-emerald-500/30'
+                : 'bg-onyx border-white-smoke/10 hover:border-white-smoke/20'
                 } ${isDragging ? 'ring-2 ring-orange-brand' : ''}`}
         >
-            <div className="flex items-start gap-2">
-                <button
-                    {...attributes}
-                    {...listeners}
-                    className="mt-1 p-1 text-white-smoke/20 hover:text-white-smoke/60 cursor-grab active:cursor-grabbing"
-                >
-                    <GripVertical className="w-4 h-4" />
-                </button>
-
-                <div className="flex-1" onClick={onClick}>
-                    {/* Client Tag */}
-                    {card.client && (
-                        <div className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium mb-1.5 inline-flex items-center gap-1">
-                            <Tag className="w-2.5 h-2.5" />
-                            {card.client}
-                        </div>
+            {/* Status Header Bar */}
+            <div className={`flex items-center justify-between px-3 py-1.5 text-[10px] font-bold ${statusInfo.color} border-b border-current/20`}>
+                <div className="flex items-center gap-2">
+                    <span>{statusInfo.icon}</span>
+                    <span className="uppercase tracking-wider">{statusInfo.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    {revision > 1 && (
+                        <span className="px-1.5 py-0.5 rounded bg-black/20 text-[9px]">
+                            REV {revision}
+                        </span>
                     )}
-
-                    <h4 className="text-white-smoke font-medium text-sm mb-2 group-hover:text-orange-brand transition-colors">
-                        {card.title}
-                    </h4>
-
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                        {/* Format Badge with Icon */}
-                        {(() => {
-                            const format = VIDEO_FORMATS.find(f => f.id === card.format) || VIDEO_FORMATS[0];
-                            const FormatIcon = format.icon;
-                            return (
-                                <div className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 font-bold ${format.color}`}>
-                                    <FormatIcon className="w-3 h-3" />
-                                    {format.label}
-                                </div>
-                            );
-                        })()}
-
-                        {/* Urgency Badge */}
-                        {card.urgency && (() => {
-                            const urgency = URGENCY_LEVELS.find(u => u.id === card.urgency);
-                            return urgency ? (
-                                <div className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 font-bold ${urgency.bgColor} ${urgency.textColor}`}>
-                                    <AlertCircle className="w-3 h-3" />
-                                    {urgency.label}
-                                </div>
-                            ) : null;
-                        })()}
-                    </div>
-
-                    {/* Assignee */}
-                    {card.assignee && (
-                        <div className="text-[10px] text-white-smoke/40 flex items-center gap-1 mb-2">
-                            <UserIcon className="w-3 h-3" />
-                            {card.assignee}
-                        </div>
-                    )}
-
-                    {/* Due Date Badge */}
-                    {card.dueDate && (
-                        <div className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 mb-2 ${dateStatus === 'overdue' ? 'bg-red-500/20 text-red-400' :
-                            dateStatus === 'soon' ? 'bg-yellow-500/20 text-yellow-400' :
-                                'bg-white-smoke/10 text-white-smoke/50'
+                    {daysLeft !== null && !isDone && (
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] ${daysLeft < 0 ? 'bg-red-500/30 text-red-300' :
+                            daysLeft <= 2 ? 'bg-amber-500/30 text-amber-300' :
+                                'bg-black/20'
                             }`}>
-                            <Clock className="w-3 h-3" />
-                            {formatDate(card.dueDate)}
-                        </div>
-                    )}
-
-                    {/* Progress indicator for checklists */}
-                    {card.checklists && card.checklists.length > 0 && (
-                        <div className="flex items-center gap-2">
-                            <div className="flex-1 h-1 bg-white-smoke/10 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-orange-brand rounded-full transition-all"
-                                    style={{
-                                        width: `${(card.checklists.filter(c => c.checked).length / card.checklists.length) * 100}%`
-                                    }}
-                                />
-                            </div>
-                            <span className="text-[10px] text-white-smoke/40">
-                                {card.checklists.filter(c => c.checked).length}/{card.checklists.length}
-                            </span>
-                        </div>
+                            {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}
+                        </span>
                     )}
                 </div>
+            </div>
+
+            {/* Card Content */}
+            <div className="p-3">
+                <div className="flex items-start gap-2">
+                    {/* Drag Handle - Admin Only */}
+                    {isAdmin && !isDone && (
+                        <button
+                            {...attributes}
+                            {...listeners}
+                            className="mt-0.5 p-0.5 text-white-smoke/15 hover:text-white-smoke/40 cursor-grab active:cursor-grabbing"
+                        >
+                            <GripVertical className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+
+                    <div className="flex-1 min-w-0" onClick={onClick}>
+                        {/* Client & Format Row */}
+                        <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                            {card.client && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium">
+                                    {card.client}
+                                </span>
+                            )}
+                            {(() => {
+                                const format = VIDEO_FORMATS.find(f => f.id === card.format) || VIDEO_FORMATS[0];
+                                const FormatIcon = format.icon;
+                                return (
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded inline-flex items-center gap-0.5 font-medium ${format.color}`}>
+                                        <FormatIcon className="w-2.5 h-2.5" />
+                                        {format.label}
+                                    </span>
+                                );
+                            })()}
+                        </div>
+
+                        {/* Title */}
+                        <h4 className="text-white-smoke font-medium text-sm mb-2 leading-tight cursor-pointer hover:text-orange-brand transition-colors truncate">
+                            {card.title}
+                        </h4>
+
+                        {/* Progress & Assignee Row */}
+                        <div className="flex items-center justify-between gap-2">
+                            {/* Checklist Progress */}
+                            {card.checklists && card.checklists.length > 0 && (
+                                <div className="flex items-center gap-1.5 flex-1">
+                                    <div className="flex-1 h-1 bg-white-smoke/10 rounded-full overflow-hidden max-w-[80px]">
+                                        <div
+                                            className="h-full bg-orange-brand rounded-full transition-all"
+                                            style={{
+                                                width: `${(card.checklists.filter(c => c.checked).length / card.checklists.length) * 100}%`
+                                            }}
+                                        />
+                                    </div>
+                                    <span className="text-[9px] text-white-smoke/40">
+                                        {Math.round((card.checklists.filter(c => c.checked).length / card.checklists.length) * 100)}%
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Assignee */}
+                            {card.assignee && (
+                                <div className="text-[9px] text-white-smoke/50 flex items-center gap-1">
+                                    <UserIcon className="w-3 h-3" />
+                                    @{card.assignee}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Quick Action Button */}
+                {statusInfo.action && !isDone && onStatusChange && (
+                    <button
+                        onClick={handleAction}
+                        className={`w-full mt-2 py-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${stageStatus === 'review'
+                            ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30'
+                            : 'bg-white-smoke/5 text-white-smoke/50 hover:bg-white-smoke/10 hover:text-white-smoke/70 border border-white-smoke/10'
+                            }`}
+                    >
+                        <ChevronRight className="w-3 h-3" />
+                        {statusInfo.action}
+                    </button>
+                )}
             </div>
         </div>
     );
@@ -317,7 +394,7 @@ const CelebrationOverlay = ({ show, onComplete }) => {
 };
 
 // Droppable Column Component
-const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard }) => {
+const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard, onStatusChange }) => {
     const [isAdding, setIsAdding] = useState(false);
     const cardIds = cards.map(c => c.id);
     const colors = COLUMN_COLORS[id] || COLUMN_COLORS.scripting;
@@ -353,6 +430,7 @@ const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard }) => {
                                 key={card.id}
                                 card={card}
                                 onClick={() => onCardClick(card)}
+                                onStatusChange={onStatusChange}
                             />
                         ))
                     )}
@@ -873,6 +951,50 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
         onUpdate?.(newItems);
     };
 
+    // Pipeline status change handler
+    const handleStatusChange = (cardId, newStatus) => {
+        const card = items.find(i => i.id === cardId);
+        if (!card) return;
+
+        let updates = { stageStatus: newStatus };
+
+        // If approved, move to next stage
+        if (newStatus === 'approved') {
+            const nextStage = getNextStage(card.stage);
+            if (nextStage) {
+                // Record approval in stage history
+                const historyEntry = {
+                    stage: card.stage,
+                    approvedBy: 'Admin', // TODO: Get from auth context
+                    date: new Date().toISOString().split('T')[0],
+                    revision: card.revision || 1
+                };
+
+                updates = {
+                    stage: nextStage,
+                    stageStatus: 'not_started',
+                    revision: 1, // Reset revision for new stage
+                    stageHistory: [...(card.stageHistory || []), historyEntry]
+                };
+
+                // Trigger celebration if moving to done
+                if (nextStage === 'done') {
+                    setShowCelebration(true);
+                }
+            }
+        }
+
+        // If requesting revisions (back to in_progress), increment revision
+        if (newStatus === 'in_progress' && card.stageStatus === 'review') {
+            updates.revision = (card.revision || 1) + 1;
+        }
+
+        const updatedCard = { ...card, ...updates };
+        const newItems = items.map(i => i.id === cardId ? updatedCard : i);
+        setItems(newItems);
+        onUpdate?.(newItems);
+    };
+
     return (
         <div className="animate-fadeIn h-full flex flex-col">
             {/* Search Bar */}
@@ -918,6 +1040,7 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                                 cards={getColumnCards(col)}
                                 onCardClick={setSelectedCard}
                                 onAddCard={(title) => handleAddCard(col, title)}
+                                onStatusChange={handleStatusChange}
                             />
                         ))}
 
