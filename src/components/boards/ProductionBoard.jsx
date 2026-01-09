@@ -18,9 +18,10 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
     Plus, X, CheckSquare, Square, GripVertical,
-    Trash2, Calendar, User as UserIcon, Edit2, Save, Clock,
-    Film, Star, Smartphone, AlertCircle, Tag, Search, Archive,
-    FolderOpen, FileText, ChevronRight, ExternalLink, Sparkles, PartyPopper
+    Trash2, Calendar, User as UserIcon, Users, Edit2, Save, Clock,
+    Film, Star, Smartphone, AlertCircle, Tag, Search, Archive, Filter,
+    FolderOpen, FileText, ChevronRight, ExternalLink, Sparkles, PartyPopper,
+    Hexagon, ArrowUpDown, Link2
 } from 'lucide-react';
 import { DatePicker } from '../common';
 
@@ -65,6 +66,54 @@ const STATUS_CONFIG = {
         icon: '●',
         action: null
     }
+};
+
+// Complexity Calculation Function
+const calculateComplexity = (card) => {
+    const weights = {
+        duration: 0.1,       // Each day adds 0.1
+        deliverables: 0.5,   // Each checklist item adds 0.5
+        assetCount: 0.2,     // Each asset adds 0.2
+        technicalLevel: 1.5, // Multiplied by 1.5
+        teamSize: 0.3,       // Each team member adds 0.3
+        dependencies: 0.5    // Each dependency adds 0.5
+    };
+
+    // Calculate duration in days
+    let duration = 0;
+    if (card.startDate && card.dueDate) {
+        const start = new Date(card.startDate);
+        const end = new Date(card.dueDate);
+        duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    }
+
+    const teamSize = 1 + (card.collaborators?.length || 0); // Project lead + collaborators
+
+    const score =
+        (duration * weights.duration) +
+        ((card.checklists?.length || 0) * weights.deliverables) +
+        ((card.assetCount || 0) * weights.assetCount) +
+        ((card.technicalLevel || 1) * weights.technicalLevel) +
+        (teamSize * weights.teamSize) +
+        ((card.dependencies?.length || 0) * weights.dependencies);
+
+    return Math.min(10, Math.max(1, Math.round(score)));
+};
+
+// Get complexity color based on score
+const getComplexityColor = (score) => {
+    if (score <= 3) return 'text-green-400 bg-green-500/20';
+    if (score <= 6) return 'text-yellow-400 bg-yellow-500/20';
+    return 'text-red-400 bg-red-500/20';
+};
+
+// Keyboard shortcuts config
+const KEYBOARD_SHORTCUTS = {
+    'n': 'New card',
+    'e': 'Edit card',
+    'a': 'Approve',
+    '/': 'Focus search',
+    'Escape': 'Close modal'
 };
 
 // LexoRank-style fractional ordering helper
@@ -262,6 +311,36 @@ const SortableCard = ({ card, onClick, onStatusChange, isAdmin = true }) => {
                                 <div className="text-[9px] text-white-smoke/50 flex items-center gap-1">
                                     <UserIcon className="w-3 h-3" />
                                     @{card.assignee}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Complexity & Team Row */}
+                        <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-white-smoke/5">
+                            {/* Complexity Badge */}
+                            {(() => {
+                                const complexity = calculateComplexity(card);
+                                return (
+                                    <div className={`text-[9px] px-1.5 py-0.5 rounded flex items-center gap-1 font-bold ${getComplexityColor(complexity)}`}>
+                                        <Hexagon className="w-2.5 h-2.5" />
+                                        {complexity}/10
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Team Size */}
+                            {card.collaborators && card.collaborators.length > 0 && (
+                                <div className="text-[9px] text-white-smoke/40 flex items-center gap-1">
+                                    <Users className="w-3 h-3" />
+                                    +{card.collaborators.length}
+                                </div>
+                            )}
+
+                            {/* Dependencies */}
+                            {card.dependencies && card.dependencies.length > 0 && (
+                                <div className="text-[9px] text-amber-400/70 flex items-center gap-1">
+                                    <Link2 className="w-3 h-3" />
+                                    {card.dependencies.length}
                                 </div>
                             )}
                         </div>
@@ -545,6 +624,7 @@ const StageTimeline = ({ currentStage, stageStatus, stageHistory }) => {
 // Team Activity Component - Comments and Status Changes
 const TeamActivity = ({ activity = [], onAddComment }) => {
     const [newComment, setNewComment] = useState('');
+    const activityEndRef = useRef(null);
 
     const formatTime = (timestamp) => {
         const date = new Date(timestamp);
@@ -556,6 +636,11 @@ const TeamActivity = ({ activity = [], onAddComment }) => {
         return `${days}d ago`;
     };
 
+    // Auto-scroll to bottom when new activity added
+    useEffect(() => {
+        activityEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [activity.length]);
+
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!newComment.trim()) return;
@@ -563,8 +648,9 @@ const TeamActivity = ({ activity = [], onAddComment }) => {
         setNewComment('');
     };
 
+    // Sort oldest first so newest appears at bottom
     const sortedActivity = [...activity].sort((a, b) =>
-        new Date(b.timestamp) - new Date(a.timestamp)
+        new Date(a.timestamp) - new Date(b.timestamp)
     );
 
     return (
@@ -573,15 +659,18 @@ const TeamActivity = ({ activity = [], onAddComment }) => {
                 <h3 className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold">Team Activity</h3>
             </div>
 
-            {/* Activity List */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
+            {/* Activity List - Newest at bottom */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0 scrollbar-thin">
                 {sortedActivity.length === 0 ? (
                     <div className="text-center text-white-smoke/30 text-xs py-8">
                         No activity yet. Be the first to comment!
                     </div>
                 ) : (
-                    sortedActivity.map(item => (
-                        <div key={item.id} className="text-sm">
+                    sortedActivity.map((item, index) => (
+                        <div
+                            key={item.id}
+                            className={`text-sm ${index === sortedActivity.length - 1 ? 'animate-fadeInUp' : ''}`}
+                        >
                             {item.type === 'comment' ? (
                                 <div className="bg-onyx rounded-lg p-3">
                                     <div className="flex items-center justify-between mb-1">
@@ -591,7 +680,7 @@ const TeamActivity = ({ activity = [], onAddComment }) => {
                                     <p className="text-white-smoke/70 text-xs leading-relaxed">{item.content}</p>
                                 </div>
                             ) : item.type === 'status_change' ? (
-                                <div className="flex items-center gap-2 text-[10px] text-white-smoke/40 py-1">
+                                <div className="flex items-center gap-2 text-[10px] text-white-smoke/40 py-1 flex-wrap">
                                     <span className="font-medium text-white-smoke/60">{item.author}</span>
                                     <span>changed status</span>
                                     <span className="px-1.5 py-0.5 rounded bg-white-smoke/10">{item.from}</span>
@@ -599,7 +688,7 @@ const TeamActivity = ({ activity = [], onAddComment }) => {
                                     <span className="px-1.5 py-0.5 rounded bg-white-smoke/10">{item.to}</span>
                                 </div>
                             ) : item.type === 'stage_change' ? (
-                                <div className="flex items-center gap-2 text-[10px] text-white-smoke/40 py-1">
+                                <div className="flex items-center gap-2 text-[10px] text-white-smoke/40 py-1 flex-wrap">
                                     <span className="font-medium text-emerald-400">{item.author}</span>
                                     <span>approved</span>
                                     <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">{item.from}</span>
@@ -610,6 +699,7 @@ const TeamActivity = ({ activity = [], onAddComment }) => {
                         </div>
                     ))
                 )}
+                <div ref={activityEndRef} />
             </div>
 
             {/* Add Comment */}
@@ -792,8 +882,8 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                         {/* Days Remaining */}
                         {daysLeft !== null && localCard.stage !== 'done' && (
                             <div className={`px-3 py-1.5 rounded-lg text-xs font-bold ${daysLeft < 0 ? 'bg-red-500/20 text-red-400' :
-                                    daysLeft <= 2 ? 'bg-amber-500/20 text-amber-400' :
-                                        'bg-white-smoke/10 text-white-smoke/60'
+                                daysLeft <= 2 ? 'bg-amber-500/20 text-amber-400' :
+                                    'bg-white-smoke/10 text-white-smoke/60'
                                 }`}>
                                 {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}
                             </div>
@@ -868,8 +958,8 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                                         key={level.id}
                                         onClick={() => updateCard({ urgency: localCard.urgency === level.id ? null : level.id })}
                                         className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${localCard.urgency === level.id
-                                                ? `${level.bgColor} ${level.textColor} border-current`
-                                                : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
+                                            ? `${level.bgColor} ${level.textColor} border-current`
+                                            : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
                                             }`}
                                     >
                                         <div className={`w-2 h-2 rounded-full ${level.color}`}></div>
@@ -904,8 +994,8 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                                         key={member}
                                         onClick={() => handleAssign(member)}
                                         className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${localCard.assignee === member
-                                                ? 'bg-orange-brand text-white-smoke border-orange-brand'
-                                                : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
+                                            ? 'bg-orange-brand text-white-smoke border-orange-brand'
+                                            : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
                                             }`}
                                     >
                                         {member}
@@ -1012,8 +1102,8 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                                     updateCard({ stage: nextStage });
                                 }}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${getNextStage(localCard.stage) === 'done'
-                                        ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30'
-                                        : 'bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 border border-violet-500/30'
+                                    ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30'
+                                    : 'bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 border border-violet-500/30'
                                     }`}
                             >
                                 <ChevronRight className="w-4 h-4" />
@@ -1051,6 +1141,11 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
     const [activeId, setActiveId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [showCelebration, setShowCelebration] = useState(false);
+
+    // Filter and Sort State
+    const [filterMyWork, setFilterMyWork] = useState(false);
+    const [sortBy, setSortBy] = useState('default'); // default, priority, dueDate, complexity
+    const currentUser = 'Alex'; // TODO: Get from auth context
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -1122,8 +1217,10 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
 
     const activeCard = activeId ? items.find(i => i.id === activeId) : null;
 
-    // Filter cards based on search query
+    // Filter cards based on search query, My Work filter, and sorting
     const getColumnCards = (columnId) => {
+        const urgencyOrder = { critical: 0, high: 1, medium: 2, low: 3, null: 4 };
+
         return items
             .filter(item => item.stage === columnId)
             .filter(item => {
@@ -1136,7 +1233,26 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                     item.assignee?.toLowerCase().includes(query)
                 );
             })
-            .sort((a, b) => (a.rank || '').localeCompare(b.rank || ''));
+            .filter(item => {
+                if (!filterMyWork) return true;
+                // Show cards where user is lead or collaborator
+                return item.assignee === currentUser ||
+                    item.collaborators?.includes(currentUser);
+            })
+            .sort((a, b) => {
+                switch (sortBy) {
+                    case 'priority':
+                        return (urgencyOrder[a.urgency] || 4) - (urgencyOrder[b.urgency] || 4);
+                    case 'dueDate':
+                        if (!a.dueDate) return 1;
+                        if (!b.dueDate) return -1;
+                        return new Date(a.dueDate) - new Date(b.dueDate);
+                    case 'complexity':
+                        return calculateComplexity(b) - calculateComplexity(a);
+                    default:
+                        return (a.rank || '').localeCompare(b.rank || '');
+                }
+            });
     };
 
     const handleAddCard = (columnId, title) => {
@@ -1226,8 +1342,8 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
 
     return (
         <div className="animate-fadeIn h-full flex flex-col">
-            {/* Search Bar */}
-            <div className="flex items-center gap-4 mb-4 flex-shrink-0">
+            {/* Search Bar & Filters */}
+            <div className="flex items-center gap-4 mb-4 flex-shrink-0 flex-wrap">
                 <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white-smoke/40" />
                     <input
@@ -1246,8 +1362,37 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                         </button>
                     )}
                 </div>
+
+                {/* My Work Toggle */}
+                <button
+                    onClick={() => setFilterMyWork(!filterMyWork)}
+                    className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 transition-all ${filterMyWork
+                            ? 'bg-orange-brand text-white-smoke'
+                            : 'bg-onyx border border-white-smoke/10 text-white-smoke/60 hover:text-white-smoke'
+                        }`}
+                >
+                    <UserIcon className="w-3.5 h-3.5" />
+                    My Work
+                </button>
+
+                {/* Sort Dropdown */}
+                <div className="relative">
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="appearance-none bg-onyx border border-white-smoke/10 rounded-lg px-3 py-2 pr-8 text-xs text-white-smoke/70 outline-none cursor-pointer hover:border-white-smoke/20"
+                    >
+                        <option value="default">Sort: Default</option>
+                        <option value="priority">Sort: Priority</option>
+                        <option value="dueDate">Sort: Due Date</option>
+                        <option value="complexity">Sort: Complexity</option>
+                    </select>
+                    <ArrowUpDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white-smoke/40 pointer-events-none" />
+                </div>
+
                 <div className="text-xs text-white-smoke/40">
                     <span className="font-bold text-white-smoke/60">{items.length}</span> total cards
+                    {filterMyWork && <span className="ml-2 text-orange-brand">(filtered)</span>}
                 </div>
             </div>
 

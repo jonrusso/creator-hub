@@ -7,12 +7,80 @@ export const STAGE_STATUSES = {
     APPROVED: 'approved'
 };
 
+// Project Templates for quick card creation
+export const PROJECT_TEMPLATES = [
+    {
+        id: 'hero-video',
+        name: 'Hero Video',
+        description: 'Short-form brand showcase (15-60s)',
+        checklists: [
+            { label: 'Script Draft' },
+            { label: 'Storyboard' },
+            { label: 'Asset Collection' },
+            { label: 'First Cut' },
+            { label: 'Color Grade' },
+            { label: 'Sound Design' },
+            { label: 'Final Review' }
+        ],
+        technicalLevel: 4,
+        estimatedDays: 7
+    },
+    {
+        id: 'tutorial',
+        name: 'Tutorial',
+        description: 'Educational long-form content',
+        checklists: [
+            { label: 'Topic Research' },
+            { label: 'Script & Outline' },
+            { label: 'Screen Recording' },
+            { label: 'Voiceover' },
+            { label: 'Editing' },
+            { label: 'Captions/Subtitles' },
+            { label: 'Thumbnail' }
+        ],
+        technicalLevel: 3,
+        estimatedDays: 10
+    },
+    {
+        id: 'bts',
+        name: 'Behind The Scenes',
+        description: 'Quick BTS content',
+        checklists: [
+            { label: 'Raw Footage Review' },
+            { label: 'Highlight Selection' },
+            { label: 'Quick Edit' },
+            { label: 'Music Sync' }
+        ],
+        technicalLevel: 2,
+        estimatedDays: 3
+    },
+    {
+        id: 'client-project',
+        name: 'Client Project',
+        description: 'Full client delivery package',
+        checklists: [
+            { label: 'Client Brief' },
+            { label: 'Concept Approval' },
+            { label: 'Script Draft' },
+            { label: 'Storyboard' },
+            { label: 'Production' },
+            { label: 'First Cut Review' },
+            { label: 'Client Revisions' },
+            { label: 'Final Delivery' },
+            { label: 'Deliverables Package' }
+        ],
+        technicalLevel: 5,
+        estimatedDays: 14
+    }
+];
+
 export const PRODUCTION_ITEMS = [
     {
         id: 1,
         title: 'AI Brand Showcase - Runway',
         stage: 'scripting',
-        assignee: 'Alex',
+        assignee: 'Alex', // Project Lead
+        collaborators: ['Sarah', 'Jordan'], // Team members
         startDate: '2026-01-08',
         dueDate: '2026-01-15',
         format: 'hero-video',
@@ -21,13 +89,22 @@ export const PRODUCTION_ITEMS = [
         description: 'Create a 30s showcase of the new Runway features focusing on Gen-2 updates.',
         checklists: [
             { id: 'c1', label: 'Script Draft', checked: true },
-            { id: 'c2', label: 'Asset Collection', checked: false }
+            { id: 'c2', label: 'Asset Collection', checked: false },
+            { id: 'c3', label: 'Storyboard', checked: false },
+            { id: 'c4', label: 'First Cut', checked: false },
+            { id: 'c5', label: 'Color Grade', checked: false }
         ],
         // Pipeline fields
         stageStatus: 'in_progress',
         reviewer: 'Keanu',
         revision: 1,
         stageHistory: [],
+        // Complexity fields
+        assetCount: 12, // Scenes/shots
+        technicalLevel: 4, // 1-5 scale (AI/VFX needs)
+        dependencies: [], // Blocked by / blocks
+        timeSpent: 180, // Minutes tracked
+        thumbnail: null, // Project thumbnail
         // Activity/Comments
         activity: [
             { id: 'act-1', type: 'comment', author: 'Keanu', timestamp: '2026-01-08T09:00:00Z', content: 'Lets focus on the Gen-2 motion features for the intro 🎬' },
@@ -39,7 +116,8 @@ export const PRODUCTION_ITEMS = [
         id: 2,
         title: 'Higgsfield Tutorial - Identity Synthesis',
         stage: 'production',
-        assignee: 'Jordan',
+        assignee: 'Jordan', // Project Lead
+        collaborators: ['Alex'], // Team members
         startDate: '2026-01-10',
         dueDate: '2026-01-18',
         format: 'long-form',
@@ -49,7 +127,9 @@ export const PRODUCTION_ITEMS = [
         checklists: [
             { id: 'qa1', label: 'Color grading matches brand palette', checked: true },
             { id: 'qa2', label: 'Audio levels normalized', checked: true },
-            { id: 'qa3', label: 'Branding placement verified', checked: false }
+            { id: 'qa3', label: 'Branding placement verified', checked: false },
+            { id: 'qa4', label: 'Screen recordings captured', checked: true },
+            { id: 'qa5', label: 'Voiceover recorded', checked: false }
         ],
         // Pipeline fields
         stageStatus: 'review',
@@ -58,6 +138,12 @@ export const PRODUCTION_ITEMS = [
         stageHistory: [
             { stage: 'scripting', approvedBy: 'Keanu', date: '2026-01-09', revision: 1 }
         ],
+        // Complexity fields
+        assetCount: 24,
+        technicalLevel: 3,
+        dependencies: [{ cardId: 1, type: 'blocked_by' }],
+        timeSpent: 420,
+        thumbnail: null,
         // Activity/Comments
         activity: [
             { id: 'act-1', type: 'stage_change', author: 'Keanu', timestamp: '2026-01-09T16:00:00Z', from: 'scripting', to: 'production' },
@@ -70,14 +156,20 @@ export const PRODUCTION_ITEMS = [
         id: 3,
         title: 'BTS - Studio Session',
         stage: 'qa',
-        assignee: 'Sarah',
+        assignee: 'Sarah', // Project Lead
+        collaborators: [], // Solo project
         startDate: '2026-01-12',
         dueDate: '2026-01-14',
         format: 'bts-short',
         client: null,
         urgency: 'low',
         description: 'Quick behind-the-scenes of the studio setup process.',
-        checklists: [],
+        checklists: [
+            { id: 'bts1', label: 'Raw footage review', checked: true },
+            { id: 'bts2', label: 'Highlight selection', checked: true },
+            { id: 'bts3', label: 'Quick edit', checked: false },
+            { id: 'bts4', label: 'Music sync', checked: false }
+        ],
         // Pipeline fields
         stageStatus: 'not_started',
         reviewer: 'Keanu',
@@ -86,6 +178,12 @@ export const PRODUCTION_ITEMS = [
             { stage: 'scripting', approvedBy: 'Keanu', date: '2026-01-10', revision: 1 },
             { stage: 'production', approvedBy: 'Keanu', date: '2026-01-11', revision: 2 }
         ],
+        // Complexity fields
+        assetCount: 6,
+        technicalLevel: 2,
+        dependencies: [],
+        timeSpent: 90,
+        thumbnail: null,
         // Activity/Comments
         activity: [
             { id: 'act-1', type: 'stage_change', author: 'Keanu', timestamp: '2026-01-10T10:00:00Z', from: 'scripting', to: 'production' },
