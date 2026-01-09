@@ -19,7 +19,8 @@ import { CSS } from '@dnd-kit/utilities';
 import {
     Plus, X, CheckSquare, Square, GripVertical,
     Trash2, Calendar, User as UserIcon, Edit2, Save, Clock,
-    Film, Star, Smartphone, AlertCircle, Tag, Search, Archive
+    Film, Star, Smartphone, AlertCircle, Tag, Search, Archive,
+    FolderOpen, FileText, ChevronRight, ExternalLink, Sparkles, PartyPopper
 } from 'lucide-react';
 import { DatePicker } from '../common';
 
@@ -257,6 +258,58 @@ const COLUMN_COLORS = {
     production: { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30' },
     qa: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' },
     done: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+};
+
+// Stage progression order
+const STAGE_ORDER = ['scripting', 'production', 'qa', 'done'];
+
+const getNextStage = (currentStage) => {
+    const idx = STAGE_ORDER.indexOf(currentStage);
+    return idx < STAGE_ORDER.length - 1 ? STAGE_ORDER[idx + 1] : null;
+};
+
+// Celebration Overlay Component
+const CelebrationOverlay = ({ show, onComplete }) => {
+    useEffect(() => {
+        if (show) {
+            const timer = setTimeout(onComplete, 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [show, onComplete]);
+
+    if (!show) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+            <div className="animate-bounce text-center">
+                <div className="flex items-center justify-center gap-2 text-6xl mb-4">
+                    🎉 <PartyPopper className="w-16 h-16 text-amber-400 animate-pulse" /> 🎊
+                </div>
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-2xl font-bold px-8 py-4 rounded-2xl shadow-2xl animate-pulse">
+                    Project Complete! 🚀
+                </div>
+                <div className="mt-4 text-white-smoke/60 text-sm">
+                    Great work on finishing this project!
+                </div>
+            </div>
+            {/* Sparkles */}
+            <div className="absolute inset-0 overflow-hidden">
+                {[...Array(20)].map((_, i) => (
+                    <Sparkles
+                        key={i}
+                        className="absolute text-amber-400 animate-ping"
+                        style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            animationDelay: `${Math.random() * 1}s`,
+                            width: `${16 + Math.random() * 16}px`,
+                            height: `${16 + Math.random() * 16}px`,
+                        }}
+                    />
+                ))}
+            </div>
+        </div>
+    );
 };
 
 // Droppable Column Component
@@ -521,6 +574,62 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                         </div>
                     </div>
 
+                    {/* Google Drive Link */}
+                    <div>
+                        <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 flex items-center gap-2">
+                            <FolderOpen className="w-3.5 h-3.5" />
+                            Project Files (Google Drive)
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="url"
+                                value={localCard.driveLink || ''}
+                                onChange={(e) => updateCard({ driveLink: e.target.value })}
+                                placeholder="https://drive.google.com/..."
+                                className="flex-1 bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
+                            />
+                            {localCard.driveLink && (
+                                <a
+                                    href={localCard.driveLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 flex items-center gap-1.5 text-xs font-medium"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    Open
+                                </a>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Script Link */}
+                    <div>
+                        <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 flex items-center gap-2">
+                            <FileText className="w-3.5 h-3.5" />
+                            Script (Google Docs)
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="url"
+                                value={localCard.scriptLink || ''}
+                                onChange={(e) => updateCard({ scriptLink: e.target.value })}
+                                placeholder="https://docs.google.com/..."
+                                className="flex-1 bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
+                            />
+                            {localCard.scriptLink && (
+                                <a
+                                    href={localCard.scriptLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-2 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 flex items-center gap-1.5 text-xs font-medium"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    Open
+                                </a>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Checklists */}
                     <div>
                         <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
@@ -579,12 +688,39 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                     >
                         <Trash2 className="w-4 h-4" /> Delete Card
                     </button>
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 bg-white-smoke/10 text-white-smoke rounded-lg text-sm font-medium hover:bg-white-smoke/20"
-                    >
-                        Close
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                        {/* Move to Next Stage Button */}
+                        {getNextStage(localCard.stage) && (
+                            <button
+                                onClick={() => {
+                                    const nextStage = getNextStage(localCard.stage);
+                                    updateCard({ stage: nextStage });
+                                }}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all ${getNextStage(localCard.stage) === 'done'
+                                    ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30'
+                                    : 'bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 border border-violet-500/30'
+                                    }`}
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                                Move to {getNextStage(localCard.stage)?.toUpperCase()}
+                                {getNextStage(localCard.stage) === 'done' && ' ✓'}
+                            </button>
+                        )}
+
+                        {localCard.stage === 'done' && (
+                            <div className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-bold flex items-center gap-2">
+                                <CheckSquare className="w-4 h-4" /> Completed!
+                            </div>
+                        )}
+
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 bg-white-smoke/10 text-white-smoke rounded-lg text-sm font-medium hover:bg-white-smoke/20"
+                        >
+                            Close
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -600,6 +736,7 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
     const [selectedCard, setSelectedCard] = useState(null);
     const [activeId, setActiveId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [showCelebration, setShowCelebration] = useState(false);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -711,6 +848,12 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
     };
 
     const handleUpdateCard = (updatedCard) => {
+        // Check if moving to done (celebration trigger)
+        const oldCard = items.find(i => i.id === updatedCard.id);
+        if (oldCard?.stage !== 'done' && updatedCard.stage === 'done') {
+            setShowCelebration(true);
+        }
+
         const newItems = items.map(i => i.id === updatedCard.id ? updatedCard : i);
         setItems(newItems);
         setSelectedCard(updatedCard);
@@ -800,6 +943,12 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                     teamMembers={teamMembers}
                 />
             )}
+
+            {/* Celebration when card moves to Done */}
+            <CelebrationOverlay
+                show={showCelebration}
+                onComplete={() => setShowCelebration(false)}
+            />
         </div>
     );
 };
