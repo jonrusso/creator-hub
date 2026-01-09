@@ -18,8 +18,24 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
     Plus, X, CheckSquare, Square, GripVertical,
-    Trash2, Calendar, User as UserIcon, Edit2, Save, Clock
+    Trash2, Calendar, User as UserIcon, Edit2, Save, Clock,
+    Film, Star, Smartphone, AlertCircle, Tag
 } from 'lucide-react';
+
+// Video Format Definitions
+const VIDEO_FORMATS = [
+    { id: 'long-form', label: 'Long-Form', icon: Film, color: 'bg-blue-500/20 text-blue-400', description: 'YouTube tutorials, BTS, documentaries' },
+    { id: 'hero-video', label: 'Hero Video', icon: Star, color: 'bg-amber-500/20 text-amber-400', description: 'Brand advertising & partnerships' },
+    { id: 'bts-short', label: 'BTS Short', icon: Smartphone, color: 'bg-pink-500/20 text-pink-400', description: 'Vertical shorts for IG profiles' },
+];
+
+// Urgency Levels
+const URGENCY_LEVELS = [
+    { id: 'critical', label: 'Critical', color: 'bg-red-500', textColor: 'text-red-400', bgColor: 'bg-red-500/20' },
+    { id: 'high', label: 'High', color: 'bg-orange-500', textColor: 'text-orange-400', bgColor: 'bg-orange-500/20' },
+    { id: 'medium', label: 'Medium', color: 'bg-yellow-500', textColor: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
+    { id: 'low', label: 'Low', color: 'bg-green-500', textColor: 'text-green-400', bgColor: 'bg-green-500/20' },
+];
 
 // LexoRank-style fractional ordering helper
 const generateRank = (before, after) => {
@@ -109,27 +125,56 @@ const SortableCard = ({ card, onClick }) => {
                 </button>
 
                 <div className="flex-1" onClick={onClick}>
+                    {/* Client Tag */}
+                    {card.client && (
+                        <div className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 font-medium mb-1.5 inline-flex items-center gap-1">
+                            <Tag className="w-2.5 h-2.5" />
+                            {card.client}
+                        </div>
+                    )}
+
                     <h4 className="text-white-smoke font-medium text-sm mb-2 group-hover:text-orange-brand transition-colors">
                         {card.title}
                     </h4>
 
-                    <div className="flex justify-between items-center mb-2">
-                        <div className="text-[10px] px-2 py-0.5 rounded bg-violet-brand/20 text-violet-brand font-bold">
-                            {card.format || 'Task'}
-                        </div>
-                        {card.assignee && (
-                            <div className="text-[10px] text-white-smoke/40 flex items-center gap-1">
-                                <UserIcon className="w-3 h-3" />
-                                {card.assignee}
-                            </div>
-                        )}
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                        {/* Format Badge with Icon */}
+                        {(() => {
+                            const format = VIDEO_FORMATS.find(f => f.id === card.format) || VIDEO_FORMATS[0];
+                            const FormatIcon = format.icon;
+                            return (
+                                <div className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 font-bold ${format.color}`}>
+                                    <FormatIcon className="w-3 h-3" />
+                                    {format.label}
+                                </div>
+                            );
+                        })()}
+
+                        {/* Urgency Badge */}
+                        {card.urgency && (() => {
+                            const urgency = URGENCY_LEVELS.find(u => u.id === card.urgency);
+                            return urgency ? (
+                                <div className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 font-bold ${urgency.bgColor} ${urgency.textColor}`}>
+                                    <AlertCircle className="w-3 h-3" />
+                                    {urgency.label}
+                                </div>
+                            ) : null;
+                        })()}
                     </div>
+
+                    {/* Assignee */}
+                    {card.assignee && (
+                        <div className="text-[10px] text-white-smoke/40 flex items-center gap-1 mb-2">
+                            <UserIcon className="w-3 h-3" />
+                            {card.assignee}
+                        </div>
+                    )}
 
                     {/* Due Date Badge */}
                     {card.dueDate && (
                         <div className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 mb-2 ${dateStatus === 'overdue' ? 'bg-red-500/20 text-red-400' :
-                                dateStatus === 'soon' ? 'bg-yellow-500/20 text-yellow-400' :
-                                    'bg-white-smoke/10 text-white-smoke/50'
+                            dateStatus === 'soon' ? 'bg-yellow-500/20 text-yellow-400' :
+                                'bg-white-smoke/10 text-white-smoke/50'
                             }`}>
                             <Clock className="w-3 h-3" />
                             {formatDate(card.dueDate)}
@@ -370,24 +415,60 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                         />
                     </div>
 
-                    {/* Format & Dates Row */}
-                    <div className="grid grid-cols-3 gap-4">
+                    {/* Client & Format Row */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
+                                Client
+                            </label>
+                            <input
+                                type="text"
+                                value={localCard.client || ''}
+                                onChange={(e) => updateCard({ client: e.target.value })}
+                                placeholder="Enter client name..."
+                                className="w-full bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
+                            />
+                        </div>
                         <div>
                             <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
                                 Format
                             </label>
                             <select
-                                value={localCard.format || 'Task'}
+                                value={localCard.format || 'long-form'}
                                 onChange={(e) => updateCard({ format: e.target.value })}
                                 className="w-full bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5"
                             >
-                                <option value="Task">Task</option>
-                                <option value="Reel">Reel</option>
-                                <option value="Video">Video</option>
-                                <option value="Story">Story</option>
-                                <option value="Post">Post</option>
+                                {VIDEO_FORMATS.map(f => (
+                                    <option key={f.id} value={f.id}>{f.label} - {f.description}</option>
+                                ))}
                             </select>
                         </div>
+                    </div>
+
+                    {/* Urgency Level */}
+                    <div>
+                        <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
+                            Urgency Level
+                        </label>
+                        <div className="flex gap-2">
+                            {URGENCY_LEVELS.map(level => (
+                                <button
+                                    key={level.id}
+                                    onClick={() => updateCard({ urgency: localCard.urgency === level.id ? null : level.id })}
+                                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${localCard.urgency === level.id
+                                            ? `${level.bgColor} ${level.textColor} border-current`
+                                            : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
+                                        }`}
+                                >
+                                    <div className={`w-2 h-2 rounded-full ${level.color}`}></div>
+                                    {level.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Dates Row */}
+                    <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
                                 Start Date
@@ -423,8 +504,8 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                                     key={member}
                                     onClick={() => handleAssign(member)}
                                     className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${localCard.assignee === member
-                                            ? 'bg-orange-brand text-white-smoke border-orange-brand'
-                                            : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
+                                        ? 'bg-orange-brand text-white-smoke border-orange-brand'
+                                        : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
                                         }`}
                                 >
                                     {member}

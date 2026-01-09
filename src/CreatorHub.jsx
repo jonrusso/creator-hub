@@ -313,7 +313,12 @@ const BoardsModule = ({ userRole }) => {
                             items={productionItems}
                             onCardClick={(card) => {
                                 setSelectedCardForTimeline(card);
-                                setProductionView('kanban'); // Switch back to kanban to edit
+                                setProductionView('kanban');
+                            }}
+                            onUpdateCard={(updatedCard) => {
+                                setProductionItems(items =>
+                                    items.map(i => i.id === updatedCard.id ? updatedCard : i)
+                                );
                             }}
                         />
                     )

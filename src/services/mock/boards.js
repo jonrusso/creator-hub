@@ -5,8 +5,11 @@ export const PRODUCTION_ITEMS = [
         title: 'AI Brand Showcase - Runway',
         stage: 'scripting',
         assignee: 'Designer',
-        dueDate: '2026-01-10',
-        format: 'Short Form',
+        startDate: '2026-01-08',
+        dueDate: '2026-01-15',
+        format: 'hero-video',
+        client: 'TechBrand',
+        urgency: 'high',
         description: 'Create a 30s showcase of the new Runway features focusing on Gen-2 updates.',
         checklists: [
             { id: 'c1', label: 'Script Draft', checked: true },
@@ -18,14 +21,30 @@ export const PRODUCTION_ITEMS = [
         title: 'Higgsfield Tutorial - Identity Synthesis',
         stage: 'production',
         assignee: 'Editor',
-        dueDate: '2026-01-12',
-        format: 'Long Form',
+        startDate: '2026-01-10',
+        dueDate: '2026-01-18',
+        format: 'long-form',
+        client: null,
+        urgency: 'medium',
         description: 'Deep dive tutorial following the new workflow.',
         checklists: [
             { id: 'qa1', label: 'Color grading matches brand palette', checked: true },
             { id: 'qa2', label: 'Audio levels normalized', checked: true },
             { id: 'qa3', label: 'Branding placement verified', checked: false }
         ]
+    },
+    {
+        id: 3,
+        title: 'BTS - Studio Session',
+        stage: 'qa',
+        assignee: 'Sarah',
+        startDate: '2026-01-12',
+        dueDate: '2026-01-14',
+        format: 'bts-short',
+        client: null,
+        urgency: 'low',
+        description: 'Quick behind-the-scenes of the studio setup process.',
+        checklists: []
     }
 ];
 
