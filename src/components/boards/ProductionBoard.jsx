@@ -21,6 +21,7 @@ import {
     Trash2, Calendar, User as UserIcon, Edit2, Save, Clock,
     Film, Star, Smartphone, AlertCircle, Tag
 } from 'lucide-react';
+import { DatePicker } from '../common';
 
 // Video Format Definitions
 const VIDEO_FORMATS = [
@@ -456,8 +457,8 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                                     key={level.id}
                                     onClick={() => updateCard({ urgency: localCard.urgency === level.id ? null : level.id })}
                                     className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-all flex items-center justify-center gap-1.5 ${localCard.urgency === level.id
-                                            ? `${level.bgColor} ${level.textColor} border-current`
-                                            : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
+                                        ? `${level.bgColor} ${level.textColor} border-current`
+                                        : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
                                         }`}
                                 >
                                     <div className={`w-2 h-2 rounded-full ${level.color}`}></div>
@@ -469,28 +470,18 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
 
                     {/* Dates Row */}
                     <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
-                                Start Date
-                            </label>
-                            <input
-                                type="date"
-                                value={localCard.startDate || ''}
-                                onChange={(e) => updateCard({ startDate: e.target.value })}
-                                className="w-full bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">
-                                Due Date
-                            </label>
-                            <input
-                                type="date"
-                                value={localCard.dueDate || ''}
-                                onChange={(e) => updateCard({ dueDate: e.target.value })}
-                                className="w-full bg-cyan-blue/50 p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5"
-                            />
-                        </div>
+                        <DatePicker
+                            label="Start Date"
+                            value={localCard.startDate || ''}
+                            onChange={(date) => updateCard({ startDate: date })}
+                            placeholder="Select start date"
+                        />
+                        <DatePicker
+                            label="Due Date"
+                            value={localCard.dueDate || ''}
+                            onChange={(date) => updateCard({ dueDate: date })}
+                            placeholder="Select due date"
+                        />
                     </div>
 
                     {/* Assignee */}
