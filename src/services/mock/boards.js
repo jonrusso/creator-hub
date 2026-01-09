@@ -4,7 +4,7 @@ export const PRODUCTION_ITEMS = [
         id: 1,
         title: 'AI Brand Showcase - Runway',
         stage: 'scripting',
-        assignee: 'Designer',
+        assignee: 'Alex',
         startDate: '2026-01-08',
         dueDate: '2026-01-15',
         format: 'hero-video',
@@ -20,7 +20,7 @@ export const PRODUCTION_ITEMS = [
         id: 2,
         title: 'Higgsfield Tutorial - Identity Synthesis',
         stage: 'production',
-        assignee: 'Editor',
+        assignee: 'Jordan',
         startDate: '2026-01-10',
         dueDate: '2026-01-18',
         format: 'long-form',
@@ -73,7 +73,7 @@ export const INSPIRATION_ITEMS = [
     { id: 5, type: 'image', thumbnail: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format', title: 'Retro Tech', creator: 'Designer Y', source: 'Pinterest', saved: true }
 ];
 
-export const TEAM_MEMBERS = ['Admin', 'Editor', 'Designer', 'Sarah', 'Mike'];
+export const TEAM_MEMBERS = ['Keanu', 'Sarah', 'Mike', 'Alex', 'Jordan'];
 
 // Mock API functions
 export const boardsService = {
