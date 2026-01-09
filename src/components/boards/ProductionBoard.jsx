@@ -19,7 +19,7 @@ import { CSS } from '@dnd-kit/utilities';
 import {
     Plus, X, CheckSquare, Square, GripVertical,
     Trash2, Calendar, User as UserIcon, Edit2, Save, Clock,
-    Film, Star, Smartphone, AlertCircle, Tag
+    Film, Star, Smartphone, AlertCircle, Tag, Search, Archive
 } from 'lucide-react';
 import { DatePicker } from '../common';
 
@@ -251,10 +251,19 @@ const AddCardForm = ({ onSubmit, onCancel }) => {
     );
 };
 
+// Column color scheme
+const COLUMN_COLORS = {
+    scripting: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30' },
+    production: { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30' },
+    qa: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' },
+    done: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+};
+
 // Droppable Column Component
 const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard }) => {
     const [isAdding, setIsAdding] = useState(false);
     const cardIds = cards.map(c => c.id);
+    const colors = COLUMN_COLORS[id] || COLUMN_COLORS.scripting;
 
     const handleAddSubmit = (cardTitle) => {
         onAddCard(cardTitle);
@@ -263,24 +272,31 @@ const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard }) => {
 
     return (
         <div className="w-80 flex-shrink-0">
-            <div className="flex items-center justify-between mb-4 px-1">
-                <h3 className="font-heading font-bold text-white-smoke uppercase tracking-wider text-sm">
+            <div className={`flex items-center justify-between mb-4 px-3 py-2 rounded-lg ${colors.bg} border ${colors.border}`}>
+                <h3 className={`font-heading font-bold uppercase tracking-wider text-sm ${colors.text}`}>
                     {title}
                 </h3>
-                <span className="text-xs text-white-smoke/40 font-mono bg-white-smoke/5 px-2 py-0.5 rounded-full">
+                <span className={`text-xs font-bold ${colors.text} px-2 py-0.5 rounded-full bg-black/20`}>
                     {cards.length}
                 </span>
             </div>
 
             <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
                 <div className="space-y-3 min-h-[100px]">
-                    {cards.map(card => (
-                        <SortableCard
-                            key={card.id}
-                            card={card}
-                            onClick={() => onCardClick(card)}
-                        />
-                    ))}
+                    {cards.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-white-smoke/10 rounded-xl text-white-smoke/30 text-xs">
+                            <Plus className="w-5 h-5 mb-1 opacity-50" />
+                            Drop cards here
+                        </div>
+                    ) : (
+                        cards.map(card => (
+                            <SortableCard
+                                key={card.id}
+                                card={card}
+                                onClick={() => onCardClick(card)}
+                            />
+                        ))
+                    )}
                 </div>
             </SortableContext>
 
@@ -580,9 +596,10 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
  */
 const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
     const [items, setItems] = useState(initialItems || []);
-    const [columns] = useState(['scripting', 'production', 'qa']);
+    const [columns] = useState(['scripting', 'production', 'qa', 'done']);
     const [selectedCard, setSelectedCard] = useState(null);
     const [activeId, setActiveId] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -654,9 +671,20 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
 
     const activeCard = activeId ? items.find(i => i.id === activeId) : null;
 
+    // Filter cards based on search query
     const getColumnCards = (columnId) => {
         return items
             .filter(item => item.stage === columnId)
+            .filter(item => {
+                if (!searchQuery.trim()) return true;
+                const query = searchQuery.toLowerCase();
+                return (
+                    item.title?.toLowerCase().includes(query) ||
+                    item.description?.toLowerCase().includes(query) ||
+                    item.client?.toLowerCase().includes(query) ||
+                    item.assignee?.toLowerCase().includes(query)
+                );
+            })
             .sort((a, b) => (a.rank || '').localeCompare(b.rank || ''));
     };
 
@@ -668,7 +696,7 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
             id: `card-${Date.now()}`,
             title: title,
             stage: columnId,
-            format: 'Task',
+            format: 'long-form',
             rank: generateRank(lastRank, null),
             checklists: [],
             description: '',
@@ -696,44 +724,72 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
     };
 
     return (
-        <div className="animate-fadeIn h-full overflow-x-auto pb-4">
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCorners}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDragEnd={handleDragEnd}
-            >
-                <div className="flex gap-6 min-w-max">
-                    {columns.map(col => (
-                        <DroppableColumn
-                            key={col}
-                            id={col}
-                            title={col}
-                            cards={getColumnCards(col)}
-                            onCardClick={setSelectedCard}
-                            onAddCard={(title) => handleAddCard(col, title)}
-                        />
-                    ))}
-
-                    <div className="w-80 flex-shrink-0">
-                        <button className="w-full h-12 flex items-center justify-center gap-2 bg-white-smoke/5 text-white-smoke/40 rounded-xl hover:bg-white-smoke/10 hover:text-white-smoke transition-all">
-                            <Plus className="w-5 h-5" /> Add List
+        <div className="animate-fadeIn h-full flex flex-col">
+            {/* Search Bar */}
+            <div className="flex items-center gap-4 mb-4 flex-shrink-0">
+                <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white-smoke/40" />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search cards by title, client, or assignee..."
+                        className="w-full bg-onyx border border-white-smoke/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white-smoke placeholder-white-smoke/30 outline-none focus:border-orange-brand/50"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-white-smoke/40 hover:text-white-smoke"
+                        >
+                            <X className="w-4 h-4" />
                         </button>
-                    </div>
+                    )}
                 </div>
+                <div className="text-xs text-white-smoke/40">
+                    <span className="font-bold text-white-smoke/60">{items.length}</span> total cards
+                </div>
+            </div>
 
-                <DragOverlay>
-                    {activeCard ? (
-                        <div className="bg-onyx p-4 rounded-xl border-2 border-orange-brand shadow-2xl opacity-90 w-72">
-                            <h4 className="text-white-smoke font-medium text-sm">{activeCard.title}</h4>
-                            <div className="text-[10px] px-2 py-0.5 rounded bg-violet-brand/20 text-violet-brand font-bold mt-2 inline-block">
-                                {activeCard.format}
-                            </div>
+            {/* Kanban Board */}
+            <div className="flex-1 overflow-x-auto pb-4">
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCorners}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDragEnd={handleDragEnd}
+                >
+                    <div className="flex gap-6 min-w-max">
+                        {columns.map(col => (
+                            <DroppableColumn
+                                key={col}
+                                id={col}
+                                title={col}
+                                cards={getColumnCards(col)}
+                                onCardClick={setSelectedCard}
+                                onAddCard={(title) => handleAddCard(col, title)}
+                            />
+                        ))}
+
+                        <div className="w-80 flex-shrink-0">
+                            <button className="w-full h-12 flex items-center justify-center gap-2 bg-white-smoke/5 text-white-smoke/40 rounded-xl hover:bg-white-smoke/10 hover:text-white-smoke transition-all">
+                                <Plus className="w-5 h-5" /> Add List
+                            </button>
                         </div>
-                    ) : null}
-                </DragOverlay>
-            </DndContext>
+                    </div>
+
+                    <DragOverlay>
+                        {activeCard ? (
+                            <div className="bg-onyx p-4 rounded-xl border-2 border-orange-brand shadow-2xl opacity-90 w-72">
+                                <h4 className="text-white-smoke font-medium text-sm">{activeCard.title}</h4>
+                                <div className="text-[10px] px-2 py-0.5 rounded bg-violet-brand/20 text-violet-brand font-bold mt-2 inline-block">
+                                    {activeCard.format}
+                                </div>
+                            </div>
+                        ) : null}
+                    </DragOverlay>
+                </DndContext>
+            </div>
 
             {selectedCard && (
                 <CardModal
