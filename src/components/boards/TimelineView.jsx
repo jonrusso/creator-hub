@@ -15,9 +15,23 @@ const STAGE_COLORS = {
     'qa': { bg: 'bg-gradient-to-r from-amber-600 to-amber-500', border: 'border-amber-500', text: 'text-amber-400', solid: 'bg-amber-500', icon: CheckCircle },
 };
 
-// Client logos - map client names (lowercase) to their logo paths
-const CLIENT_LOGOS = {
+// Client Logos - stored in localStorage until Supabase is ready
+const CLIENT_LOGOS_KEY = 'creator_hub_client_logos';
+const BUILT_IN_LOGOS = {
     'higgsfield': '/logos/higgsfield.jpg',
+};
+
+// Get logo for a specific client (shared with ProductionBoard)
+const getClientLogo = (clientName) => {
+    if (!clientName) return null;
+    try {
+        const stored = localStorage.getItem(CLIENT_LOGOS_KEY);
+        const userLogos = stored ? JSON.parse(stored) : {};
+        const allLogos = { ...BUILT_IN_LOGOS, ...userLogos };
+        return allLogos[clientName.toLowerCase()] || null;
+    } catch {
+        return BUILT_IN_LOGOS[clientName.toLowerCase()] || null;
+    }
 };
 
 /**
@@ -387,7 +401,7 @@ const TimelineView = ({ items, onCardClick, onUpdateCard }) => {
                                                 );
                                             })()}
                                             {groupBy === 'client' && (() => {
-                                                const clientLogo = CLIENT_LOGOS[group?.toLowerCase()];
+                                                const clientLogo = getClientLogo(group);
                                                 return clientLogo ? (
                                                     <img
                                                         src={clientLogo}
@@ -500,7 +514,7 @@ const TimelineView = ({ items, onCardClick, onUpdateCard }) => {
                                                                     {item.title}
                                                                 </div>
                                                                 {item.client && (() => {
-                                                                    const clientLogo = CLIENT_LOGOS[item.client?.toLowerCase()];
+                                                                    const clientLogo = getClientLogo(item.client);
                                                                     return (
                                                                         <div className="text-[9px] text-white/60 truncate flex items-center gap-1">
                                                                             {clientLogo ? (

@@ -21,7 +21,7 @@ import {
     Trash2, Calendar, User as UserIcon, Users, Edit2, Save, Clock, MessageCircle,
     Film, Star, Smartphone, AlertCircle, Tag, Search, Archive, Filter,
     FolderOpen, FileText, ChevronRight, ExternalLink, Sparkles, PartyPopper,
-    Hexagon, ArrowUpDown, Link2
+    Hexagon, ArrowUpDown, Link2, ImagePlus
 } from 'lucide-react';
 import { DatePicker } from '../common';
 
@@ -87,6 +87,45 @@ const getDefaultChecklist = (format) => {
         default:
             return [];
     }
+};
+
+// Client Logos - stored in localStorage until Supabase is ready
+const CLIENT_LOGOS_KEY = 'creator_hub_client_logos';
+
+// Built-in logos (shipped with app)
+const BUILT_IN_LOGOS = {
+    'higgsfield': '/logos/higgsfield.jpg',
+};
+
+// Get all client logos (built-in + user-uploaded)
+const getClientLogos = () => {
+    try {
+        const stored = localStorage.getItem(CLIENT_LOGOS_KEY);
+        const userLogos = stored ? JSON.parse(stored) : {};
+        return { ...BUILT_IN_LOGOS, ...userLogos };
+    } catch {
+        return BUILT_IN_LOGOS;
+    }
+};
+
+// Save a client logo (base64)
+const saveClientLogo = (clientName, base64Data) => {
+    try {
+        const stored = localStorage.getItem(CLIENT_LOGOS_KEY);
+        const userLogos = stored ? JSON.parse(stored) : {};
+        userLogos[clientName.toLowerCase()] = base64Data;
+        localStorage.setItem(CLIENT_LOGOS_KEY, JSON.stringify(userLogos));
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+// Get logo for a specific client
+const getClientLogo = (clientName) => {
+    if (!clientName) return null;
+    const logos = getClientLogos();
+    return logos[clientName.toLowerCase()] || null;
 };
 
 // Pipeline Status Config
@@ -1389,13 +1428,57 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers, externalEdi
                             {/* Client & Format */}
                             <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
                                 <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">Client</label>
-                                <input
-                                    type="text"
-                                    value={localCard.client || ''}
-                                    onChange={(e) => updateCard({ client: e.target.value })}
-                                    placeholder="Enter client name..."
-                                    className="w-full bg-onyx p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
-                                />
+                                <div className="flex items-center gap-2">
+                                    {/* Logo preview or upload button */}
+                                    {(() => {
+                                        const logo = getClientLogo(localCard.client);
+                                        const fileInputId = `client-logo-${localCard.id}`;
+                                        return (
+                                            <>
+                                                <input
+                                                    type="file"
+                                                    id={fileInputId}
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file && localCard.client) {
+                                                            const reader = new FileReader();
+                                                            reader.onload = (event) => {
+                                                                saveClientLogo(localCard.client, event.target.result);
+                                                                // Force re-render
+                                                                updateCard({ client: localCard.client });
+                                                            };
+                                                            reader.readAsDataURL(file);
+                                                        }
+                                                        e.target.value = '';
+                                                    }}
+                                                />
+                                                <button
+                                                    onClick={() => document.getElementById(fileInputId)?.click()}
+                                                    className={`w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center transition-all ${logo
+                                                            ? 'p-0 overflow-hidden'
+                                                            : 'bg-white-smoke/10 hover:bg-white-smoke/20 text-white-smoke/40 hover:text-white-smoke'
+                                                        }`}
+                                                    title={logo ? "Change logo" : "Add client logo"}
+                                                >
+                                                    {logo ? (
+                                                        <img src={logo} alt={localCard.client} className="w-full h-full object-cover rounded-lg" />
+                                                    ) : (
+                                                        <ImagePlus className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            </>
+                                        );
+                                    })()}
+                                    <input
+                                        type="text"
+                                        value={localCard.client || ''}
+                                        onChange={(e) => updateCard({ client: e.target.value })}
+                                        placeholder="Enter client name..."
+                                        className="flex-1 bg-onyx p-2 rounded-lg text-white-smoke text-sm outline-none border border-white-smoke/5 focus:border-orange-brand/50"
+                                    />
+                                </div>
                             </div>
                             <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
                                 <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-2 block">Format</label>

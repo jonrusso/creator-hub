@@ -11,36 +11,70 @@ import { Logo, GlassCard, Input, Button } from './components/common';
 import { AuthenticationLayer } from './components/auth';
 import TeamModule from './components/TeamModule';
 import { ProductionBoard, TimelineView } from './components/boards';
-import { WORKFLOWS_DB, PRODUCTION_ITEMS, INSPIRATION_ITEMS, TEAM_MEMBERS } from './services/mock';
+import { WORKFLOWS_DB, WORKFLOW_CATEGORIES, PRODUCTION_ITEMS, INSPIRATION_ITEMS, TEAM_MEMBERS } from './services/mock';
 import { supabase, isSupabaseConfigured } from './services/supabase/client';
 
-
-// ==================== WORKFLOWS MODULE (V3: Doc & Approvals) ====================
+// ==================== WORKFLOWS MODULE (V4: Categories, Search, Visual Upgrade) ====================
 const WorkflowsModule = ({ userRole }) => {
-    const [view, setView] = useState('list'); // list | detail | draft
+    const [view, setView] = useState('list'); // list | detail
     const [selectedWorkflow, setSelectedWorkflow] = useState(null);
     const [activeTab, setActiveTab] = useState('library'); // library | approvals
+    const [activeCategory, setActiveCategory] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
     const [db, setDb] = useState(WORKFLOWS_DB);
 
     const isAdmin = userRole === 'admin';
 
-    // Workflow Detail (Doc View)
+    // Difficulty badge colors
+    const getDifficultyStyle = (difficulty) => {
+        switch (difficulty) {
+            case 'beginner': return 'bg-emerald-500/20 text-emerald-400';
+            case 'intermediate': return 'bg-amber-500/20 text-amber-400';
+            case 'advanced': return 'bg-red-500/20 text-red-400';
+            default: return 'bg-white-smoke/10 text-white-smoke/60';
+        }
+    };
+
+    // Get category info
+    const getCategoryInfo = (categoryId) => {
+        return WORKFLOW_CATEGORIES.find(c => c.id === categoryId) || { label: 'Uncategorized', icon: '📄', color: 'bg-white-smoke/10 text-white-smoke/60' };
+    };
+
+    // Count required steps
+    const getStepCount = (workflow) => {
+        return workflow.sections?.filter(s => s.type === 'step' && s.isRequired).length || 0;
+    };
+
+    // Workflow Detail (Enhanced Doc View)
     const WorkflowDetail = ({ workflow, onBack }) => {
         const [isEditing, setIsEditing] = useState(false);
         const [localSections, setLocalSections] = useState(workflow.sections || []);
+        const [completedSteps, setCompletedSteps] = useState([]);
+        const category = getCategoryInfo(workflow.category);
+        const totalSteps = getStepCount(workflow);
+        const progress = totalSteps > 0 ? Math.round((completedSteps.length / totalSteps) * 100) : 0;
 
         const handleSave = () => {
-            // Mock save
             setIsEditing(false);
-            // In real app, update DB
+        };
+
+        const toggleStep = (stepId) => {
+            setCompletedSteps(prev =>
+                prev.includes(stepId)
+                    ? prev.filter(id => id !== stepId)
+                    : [...prev, stepId]
+            );
         };
 
         const addSection = (type) => {
-            const newSection = { id: Date.now(), title: 'New Section', type, content: '' };
+            const newSection = { id: Date.now(), title: 'New Section', type, content: '', isRequired: type === 'step' };
             setLocalSections([...localSections, newSection]);
         };
 
         const renderSection = (section, index) => {
+            const isStep = section.type === 'step';
+            const isCompleted = completedSteps.includes(section.id);
+
             if (isEditing) {
                 return (
                     <div key={section.id} className="bg-cyan-blue/30 p-4 rounded-xl border border-white-smoke/10 mb-4">
@@ -51,59 +85,130 @@ const WorkflowsModule = ({ userRole }) => {
             }
 
             return (
-                <div key={section.id} className="mb-8 last:mb-0">
-                    <h3 className="text-white-smoke font-heading text-xl font-bold mb-3 flex items-center gap-2">
-                        {section.title}
-                    </h3>
+                <div key={section.id} className={`mb-6 last:mb-0 ${isStep ? 'pl-4 border-l-2 border-white-smoke/10' : ''}`}>
+                    <div className="flex items-start gap-3">
+                        {isStep && (
+                            <button
+                                onClick={() => toggleStep(section.id)}
+                                className={`mt-1 flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isCompleted
+                                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                                        : 'border-white-smoke/30 hover:border-orange-brand'
+                                    }`}
+                            >
+                                {isCompleted && <Check className="w-4 h-4" />}
+                            </button>
+                        )}
+                        <div className="flex-1">
+                            <h3 className={`text-white-smoke font-heading text-lg font-bold mb-2 flex items-center gap-2 ${isCompleted ? 'line-through opacity-50' : ''}`}>
+                                {isStep && <span className="text-orange-brand text-sm">Step {index}</span>}
+                                {section.title}
+                                {section.isRequired && <span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded">Required</span>}
+                            </h3>
 
-                    {section.type === 'text' && (
-                        <p className="text-white-smoke/80 font-body leading-relaxed whitespace-pre-wrap">{section.content}</p>
-                    )}
+                            <p className={`text-white-smoke/80 font-body leading-relaxed whitespace-pre-wrap mb-4 ${isCompleted ? 'opacity-50' : ''}`}>
+                                {section.content}
+                            </p>
 
-                    {section.type === 'image' && (
-                        <div className="rounded-xl overflow-hidden border border-white-smoke/5 bg-black/20">
-                            <img src={section.url} alt={section.caption} className="w-full h-full object-contain" />
-                            {section.caption && <p className="p-3 text-sm text-white-smoke/40 italic">{section.caption}</p>}
+                            {/* Prompt block */}
+                            {section.prompt && (
+                                <div className="bg-cyan-blue p-4 rounded-lg border-l-4 border-orange-brand mb-4">
+                                    <div className="flex justify-between items-start gap-4">
+                                        <code className="text-white-smoke/90 font-mono text-sm">{section.prompt}</code>
+                                        <button
+                                            onClick={() => navigator.clipboard.writeText(section.prompt)}
+                                            className="p-2 hover:bg-white-smoke/10 rounded flex-shrink-0"
+                                        >
+                                            <Copy className="w-4 h-4 text-white-smoke/60" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Media */}
+                            {section.media && section.media.type === 'image' && (
+                                <div className="rounded-xl overflow-hidden border border-white-smoke/5 bg-black/20 mb-4">
+                                    <img src={section.media.url} alt={section.media.caption} className="w-full h-auto object-contain" />
+                                    {section.media.caption && <p className="p-3 text-sm text-white-smoke/40 italic">{section.media.caption}</p>}
+                                </div>
+                            )}
+
+                            {section.media && section.media.type === 'video' && (
+                                <div className="aspect-video bg-black rounded-xl overflow-hidden border border-white-smoke/10 mb-4">
+                                    <iframe
+                                        src={section.media.url}
+                                        className="w-full h-full"
+                                        title={section.title}
+                                        frameBorder="0"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                    />
+                                </div>
+                            )}
                         </div>
-                    )}
-
-                    {section.type === 'prompt' && (
-                        <div className="bg-cyan-blue p-5 rounded-lg border-l-4 border-orange-brand">
-                            <div className="flex justify-between items-start gap-4">
-                                <code className="text-white-smoke/90 font-mono text-sm">{section.content}</code>
-                                <button onClick={() => navigator.clipboard.writeText(section.content)} className="p-2 hover:bg-white-smoke/10 rounded">
-                                    <Copy className="w-4 h-4 text-white-smoke/60" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {section.type === 'video' && (
-                        <div className="aspect-video bg-black rounded-xl overflow-hidden border border-white-smoke/10">
-                            <iframe
-                                src={section.url}
-                                className="w-full h-full"
-                                title={section.title}
-                                frameBorder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                            />
-                        </div>
-                    )}
+                    </div>
                 </div>
             );
         };
 
         return (
             <div className="max-w-4xl mx-auto animate-fadeIn">
-                {/* Detail Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <button onClick={onBack} className="flex items-center gap-2 text-white-smoke/60 hover:text-white-smoke transition-colors">
-                        <ArrowLeft className="w-5 h-5" /> Back to Library
-                    </button>
+                {/* Hero Header with Cover Image */}
+                <div className="relative rounded-2xl overflow-hidden mb-8">
+                    {workflow.coverImage && (
+                        <div className="absolute inset-0">
+                            <img src={workflow.coverImage} alt="" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-onyx via-onyx/80 to-transparent" />
+                        </div>
+                    )}
+                    <div className="relative p-8 pt-24">
+                        <button onClick={onBack} className="flex items-center gap-2 text-white-smoke/60 hover:text-white-smoke transition-colors mb-6">
+                            <ArrowLeft className="w-5 h-5" /> Back to Library
+                        </button>
 
-                    <div className="flex gap-3">
-                        {!isEditing && (
+                        <div className="flex items-center gap-3 mb-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${category.color}`}>
+                                {category.icon} {category.label}
+                            </span>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${workflow.status === 'published' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                                {workflow.status.replace('_', ' ')}
+                            </span>
+                        </div>
+
+                        <h1 className="text-4xl md:text-5xl font-heading font-bold text-white-smoke mb-4">{workflow.title}</h1>
+                        <p className="text-xl text-white-smoke/60 font-light mb-6">{workflow.description}</p>
+
+                        <div className="flex items-center gap-6 text-sm text-white-smoke/50">
+                            <span>⏱️ {workflow.estimatedTime} min</span>
+                            <span>📋 {totalSteps} steps</span>
+                            <span className={`px-2 py-0.5 rounded ${getDifficultyStyle(workflow.difficulty)}`}>
+                                {workflow.difficulty}
+                            </span>
+                            <span>Updated {workflow.lastUpdated} by {workflow.author}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Progress Bar */}
+                {totalSteps > 0 && (
+                    <div className="bg-onyx rounded-xl p-4 border border-white-smoke/5 mb-6">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-bold text-white-smoke">Your Progress</span>
+                            <span className="text-sm text-orange-brand font-bold">{progress}%</span>
+                        </div>
+                        <div className="h-2 bg-white-smoke/10 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-orange-brand to-violet-brand transition-all duration-500"
+                                style={{ width: `${progress}%` }}
+                            />
+                        </div>
+                        <p className="text-[10px] text-white-smoke/40 mt-2">{completedSteps.length} of {totalSteps} required steps completed</p>
+                    </div>
+                )}
+
+                {/* Content */}
+                <div className="bg-onyx rounded-2xl p-8 border border-white-smoke/5 shadow-2xl">
+                    <div className="flex justify-end gap-3 mb-8">
+                        {!isEditing && isAdmin && (
                             <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 bg-white-smoke/10 hover:bg-white-smoke/20 text-white-smoke px-4 py-2 rounded-lg transition-all">
                                 <Edit2 className="w-4 h-4" /> Edit
                             </button>
@@ -113,28 +218,9 @@ const WorkflowsModule = ({ userRole }) => {
                                 <Check className="w-4 h-4" /> Save Changes
                             </button>
                         )}
-                        {isAdmin && (
-                            <button className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg" title="Delete Workflow">
-                                <Trash2 className="w-5 h-5" />
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                <div className="bg-onyx rounded-2xl p-8 md:p-12 border border-white-smoke/5 shadow-2xl">
-                    <div className="flex items-center gap-3 mb-6">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${workflow.status === 'published' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
-                            {workflow.status.replace('_', ' ')}
-                        </span>
-                        <span className="text-white-smoke/40 text-sm">Last updated {workflow.lastUpdated} by {workflow.author}</span>
                     </div>
 
-                    <h1 className="text-4xl md:text-5xl font-heading font-bold text-white-smoke mb-4">{workflow.title}</h1>
-                    <p className="text-xl text-white-smoke/60 font-light mb-12">{workflow.description}</p>
-
-                    <div className="h-px bg-white-smoke/10 w-full mb-12" />
-
-                    <div className="space-y-12">
+                    <div className="space-y-8">
                         {localSections.map((section, idx) => renderSection(section, idx))}
                     </div>
 
@@ -143,6 +229,7 @@ const WorkflowsModule = ({ userRole }) => {
                             <p className="text-white-smoke/40 text-sm mb-4">Add Content Block</p>
                             <div className="flex justify-center gap-4">
                                 <button onClick={() => addSection('text')} className="p-3 bg-white-smoke/5 rounded-lg hover:bg-white-smoke/10"><FileText className="w-5 h-5" /></button>
+                                <button onClick={() => addSection('step')} className="p-3 bg-orange-brand/20 rounded-lg hover:bg-orange-brand/30 text-orange-brand"><CheckSquare className="w-5 h-5" /></button>
                                 <button onClick={() => addSection('image')} className="p-3 bg-white-smoke/5 rounded-lg hover:bg-white-smoke/10"><ImageIcon className="w-5 h-5" /></button>
                                 <button onClick={() => addSection('video')} className="p-3 bg-white-smoke/5 rounded-lg hover:bg-white-smoke/10"><Video className="w-5 h-5" /></button>
                             </div>
@@ -153,15 +240,33 @@ const WorkflowsModule = ({ userRole }) => {
         );
     };
 
+    // Filter workflows
     const filteredWorkflows = db.filter(w => {
+        // Tab filter
         if (activeTab === 'approvals') return w.status === 'pending_approval';
-        return w.status === 'published' || w.status === 'draft'; // Show user's drafts (simplified)
+        if (activeTab === 'library' && w.status === 'pending_approval' && !isAdmin) return false;
+
+        // Category filter
+        if (activeCategory !== 'all' && w.category !== activeCategory) return false;
+
+        // Search filter
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            return (
+                w.title.toLowerCase().includes(query) ||
+                w.description.toLowerCase().includes(query) ||
+                w.author.toLowerCase().includes(query)
+            );
+        }
+
+        return true;
     });
 
     if (view === 'detail' && selectedWorkflow) return <WorkflowDetail workflow={selectedWorkflow} onBack={() => setView('list')} />;
 
     return (
         <div className="space-y-6 animate-fadeIn">
+            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-white-smoke font-heading text-3xl font-bold mb-1">Workflows</h1>
@@ -178,43 +283,112 @@ const WorkflowsModule = ({ userRole }) => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredWorkflows.map((workflow) => (
-                    <div
-                        key={workflow.id}
-                        onClick={() => { setSelectedWorkflow(workflow); setView('detail'); }}
-                        className="group rounded-2xl p-4 transition-all cursor-pointer flex flex-col h-full relative overflow-hidden"
-                        style={{
-                            background: 'rgba(15, 15, 15, 0.3)',
-                            backdropFilter: 'blur(10px)',
-                            WebkitBackdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(255, 255, 255, 0.05)',
-                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.border = '1px solid rgba(255, 155, 76, 0.4)';
-                            e.currentTarget.style.boxShadow = '0 0 30px rgba(255, 155, 76, 0.2)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.border = '1px solid rgba(255, 255, 255, 0.05)';
-                            e.currentTarget.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-                        }}
-                    >
-                        {workflow.status === 'pending_approval' && <div className="absolute top-0 right-0 bg-yellow-500/20 text-yellow-500 text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">Pending Approval</div>}
+            {/* Search & Category Filter */}
+            <div className="flex flex-col md:flex-row gap-4">
+                {/* Search */}
+                <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white-smoke/40" />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search workflows..."
+                        className="w-full bg-onyx border border-white-smoke/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white-smoke placeholder-white-smoke/30 outline-none focus:border-orange-brand/50"
+                    />
+                </div>
 
-                        <div className="flex items-start justify-between mb-3 mt-1">
-                            <div className="p-2 rounded-lg bg-cyan-blue border border-white-smoke/5 group-hover:border-orange-brand/20 transition-colors">
-                                <FileText className="w-5 h-5 text-orange-brand" />
+                {/* Category Pills */}
+                <div className="flex gap-2 flex-wrap">
+                    <button
+                        onClick={() => setActiveCategory('all')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeCategory === 'all'
+                                ? 'bg-orange-brand/20 text-orange-brand border border-orange-brand/30'
+                                : 'bg-onyx border border-white-smoke/10 text-white-smoke/60 hover:text-white-smoke'
+                            }`}
+                    >
+                        All
+                    </button>
+                    {WORKFLOW_CATEGORIES.map(cat => (
+                        <button
+                            key={cat.id}
+                            onClick={() => setActiveCategory(cat.id)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeCategory === cat.id
+                                    ? `${cat.color} border border-current`
+                                    : 'bg-onyx border border-white-smoke/10 text-white-smoke/60 hover:text-white-smoke'
+                                }`}
+                        >
+                            {cat.icon} {cat.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Results count */}
+            <div className="text-xs text-white-smoke/40">
+                {filteredWorkflows.length} workflow{filteredWorkflows.length !== 1 ? 's' : ''} found
+            </div>
+
+            {/* Workflow Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {filteredWorkflows.map((workflow) => {
+                    const category = getCategoryInfo(workflow.category);
+                    const stepCount = getStepCount(workflow);
+
+                    return (
+                        <div
+                            key={workflow.id}
+                            onClick={() => { setSelectedWorkflow(workflow); setView('detail'); }}
+                            className="group rounded-2xl overflow-hidden transition-all cursor-pointer relative bg-onyx border border-white-smoke/5 hover:border-orange-brand/30 hover:shadow-lg hover:shadow-orange-brand/10"
+                        >
+                            {/* Cover Image */}
+                            {workflow.coverImage && (
+                                <div className="h-32 overflow-hidden relative">
+                                    <img
+                                        src={workflow.coverImage}
+                                        alt=""
+                                        className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-onyx to-transparent" />
+                                </div>
+                            )}
+
+                            {/* Status Badge */}
+                            {workflow.status === 'pending_approval' && (
+                                <div className="absolute top-2 right-2 bg-yellow-500/90 text-black text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
+                                    Pending
+                                </div>
+                            )}
+
+                            <div className="p-4">
+                                {/* Category & Difficulty */}
+                                <div className="flex items-center gap-2 mb-3">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${category.color}`}>
+                                        {category.icon} {category.label}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getDifficultyStyle(workflow.difficulty)}`}>
+                                        {workflow.difficulty}
+                                    </span>
+                                </div>
+
+                                {/* Title & Description */}
+                                <h3 className="text-white-smoke font-heading text-lg font-bold mb-2 group-hover:text-orange-brand transition-colors line-clamp-1">
+                                    {workflow.title}
+                                </h3>
+                                <p className="text-white-smoke/60 text-xs mb-4 line-clamp-2">{workflow.description}</p>
+
+                                {/* Meta Info */}
+                                <div className="flex items-center justify-between text-[10px] text-white-smoke/40 pt-3 border-t border-white-smoke/5">
+                                    <div className="flex items-center gap-3">
+                                        <span>⏱️ {workflow.estimatedTime}m</span>
+                                        <span>📋 {stepCount} steps</span>
+                                    </div>
+                                    <span>by {workflow.author}</span>
+                                </div>
                             </div>
                         </div>
-                        <h3 className="text-white-smoke font-heading text-lg font-bold mb-2 group-hover:text-orange-brand transition-colors">{workflow.title}</h3>
-                        <p className="text-white-smoke/60 text-xs mb-4 line-clamp-2">{workflow.description}</p>
-                        <div className="mt-auto pt-4 border-t border-white-smoke/5 flex items-center justify-between text-xs text-white-smoke/40">
-                            <span>Updated {workflow.lastUpdated}</span>
-                            <span>by {workflow.author}</span>
-                        </div>
-                    </div>
-                ))}
+                    );
+                })}
+
                 {/* Create New Card */}
                 <div className="group bg-onyx/40 rounded-2xl p-6 border-2 border-dashed border-white-smoke/5 hover:border-orange-brand/30 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[250px] text-white-smoke/40 hover:text-orange-brand">
                     <Plus className="w-12 h-12 mb-4 group-hover:scale-110 transition-transform" />
