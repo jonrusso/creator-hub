@@ -18,7 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
     Plus, X, CheckSquare, Square, GripVertical,
-    Trash2, Calendar, User as UserIcon, Users, Edit2, Save, Clock,
+    Trash2, Calendar, User as UserIcon, Users, Edit2, Save, Clock, MessageCircle,
     Film, Star, Smartphone, AlertCircle, Tag, Search, Archive, Filter,
     FolderOpen, FileText, ChevronRight, ExternalLink, Sparkles, PartyPopper,
     Hexagon, ArrowUpDown, Link2
@@ -39,6 +39,55 @@ const URGENCY_LEVELS = [
     { id: 'medium', label: 'Medium', color: 'bg-yellow-500', textColor: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
     { id: 'low', label: 'Low', color: 'bg-green-500', textColor: 'text-green-400', bgColor: 'bg-green-500/20' },
 ];
+
+// Default Production Checklist Templates
+const CHECKLIST_TEMPLATES = {
+    // Full production workflow for hero videos and long-form
+    full: [
+        { id: 'tpl-1', label: 'Script ready-to-go', checked: false },
+        { id: 'tpl-2', label: 'Concept (references/PDF)', checked: false },
+        { id: 'tpl-3', label: 'Videoshoot (record dailies)', checked: false },
+        { id: 'tpl-4', label: 'Log files', checked: false },
+        { id: 'tpl-5', label: 'Rough cut', checked: false },
+        { id: 'tpl-6', label: 'Screen recording (BTS/inserts)', checked: false },
+        { id: 'tpl-7', label: 'B-rolls', checked: false },
+        { id: 'tpl-8', label: 'Planning video (timestamps)', checked: false },
+        { id: 'tpl-9', label: 'Add soundtrack', checked: false },
+        { id: 'tpl-10', label: 'Color correction & grading', checked: false },
+        { id: 'tpl-11', label: 'Add SFX', checked: false },
+        { id: 'tpl-12', label: 'Final export', checked: false },
+    ],
+    // Simplified for BTS shorts
+    bts: [
+        { id: 'tpl-1', label: 'Select BTS footage', checked: false },
+        { id: 'tpl-2', label: 'Rough cut', checked: false },
+        { id: 'tpl-3', label: 'Add music', checked: false },
+        { id: 'tpl-4', label: 'Color grade', checked: false },
+        { id: 'tpl-5', label: 'Final export', checked: false },
+    ],
+    // Optional extras (can be added to any template)
+    extras: [
+        { id: 'extra-1', label: 'CGI', checked: false },
+        { id: 'extra-2', label: '3D elements', checked: false },
+        { id: 'extra-3', label: 'AI video generation', checked: false },
+        { id: 'extra-4', label: 'AI image generation', checked: false },
+    ],
+    // Empty for custom
+    empty: [],
+};
+
+// Get template based on format
+const getDefaultChecklist = (format) => {
+    switch (format) {
+        case 'hero-video':
+        case 'long-form':
+            return CHECKLIST_TEMPLATES.full.map(item => ({ ...item, id: `${item.id}-${Date.now()}` }));
+        case 'bts-short':
+            return CHECKLIST_TEMPLATES.bts.map(item => ({ ...item, id: `${item.id}-${Date.now()}` }));
+        default:
+            return [];
+    }
+};
 
 // Pipeline Status Config
 const STATUS_CONFIG = {
@@ -195,7 +244,7 @@ const SortableCard = ({ card, onClick, onStatusChange, isAdmin = true }) => {
     const isDone = card.stage === 'done';
     const stageStatus = card.stageStatus || 'not_started';
     const statusInfo = STATUS_CONFIG[stageStatus] || STATUS_CONFIG.not_started;
-    const revision = card.revision || 1;
+    const stageVersion = card.stageVersion || 1;
 
     // Calculate days remaining
     const getDaysRemaining = () => {
@@ -237,9 +286,9 @@ const SortableCard = ({ card, onClick, onStatusChange, isAdmin = true }) => {
                     <span className="uppercase tracking-wider">{statusInfo.label}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    {revision > 1 && (
-                        <span className="px-1.5 py-0.5 rounded bg-black/20 text-[9px]">
-                            REV {revision}
+                    {stageVersion > 1 && (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-300 text-[9px] font-bold">
+                            V{stageVersion}
                         </span>
                     )}
                     {daysLeft !== null && !isDone && (
@@ -252,6 +301,33 @@ const SortableCard = ({ card, onClick, onStatusChange, isAdmin = true }) => {
                     )}
                 </div>
             </div>
+
+            {/* Thumbnail Preview */}
+            {card.thumbnail ? (
+                <div
+                    className="h-20 w-full bg-cover bg-center cursor-pointer"
+                    style={{ backgroundImage: `url(${card.thumbnail})` }}
+                    onClick={onClick}
+                />
+            ) : (
+                <div
+                    className="h-16 w-full cursor-pointer flex items-center justify-center"
+                    onClick={onClick}
+                    style={{
+                        background: card.format === 'hero-video'
+                            ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(234, 88, 12, 0.15) 100%)'
+                            : card.format === 'bts-short'
+                                ? 'linear-gradient(135deg, rgba(236, 72, 153, 0.15) 0%, rgba(219, 39, 119, 0.15) 100%)'
+                                : 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%)'
+                    }}
+                >
+                    {(() => {
+                        const format = VIDEO_FORMATS.find(f => f.id === card.format) || VIDEO_FORMATS[0];
+                        const FormatIcon = format.icon;
+                        return <FormatIcon className="w-6 h-6 text-white-smoke/20" />;
+                    })()}
+                </div>
+            )}
 
             {/* Card Content */}
             <div className="p-3">
@@ -268,6 +344,16 @@ const SortableCard = ({ card, onClick, onStatusChange, isAdmin = true }) => {
                     )}
 
                     <div className="flex-1 min-w-0" onClick={onClick}>
+                        {/* Parent Project Badge (for multi-deliverable) */}
+                        {card.parentProject && (
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 font-medium flex items-center gap-1">
+                                    <FolderOpen className="w-2.5 h-2.5" />
+                                    {card.parentProject}
+                                </span>
+                            </div>
+                        )}
+
                         {/* Client & Format Row */}
                         <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                             {card.client && (
@@ -373,8 +459,11 @@ const SortableCard = ({ card, onClick, onStatusChange, isAdmin = true }) => {
 };
 
 // Add Card Form Component
-const AddCardForm = ({ onSubmit, onCancel }) => {
+const AddCardForm = ({ onSubmit, onCancel, existingProjects = [] }) => {
     const [title, setTitle] = useState('');
+    const [parentProject, setParentProject] = useState('');
+    const [isNewProject, setIsNewProject] = useState(false);
+    const [format, setFormat] = useState('hero-video');
     const inputRef = useRef(null);
 
     useEffect(() => {
@@ -384,22 +473,123 @@ const AddCardForm = ({ onSubmit, onCancel }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (title.trim()) {
-            onSubmit(title.trim());
+            let finalParentProject = null;
+            let finalProjectId = null;
+
+            // Determine parent project and ID
+            if (isNewProject && parentProject.trim()) {
+                // Creating a new parent project
+                finalParentProject = parentProject.trim();
+                finalProjectId = `project-${parentProject.trim().toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+            } else if (!isNewProject && parentProject) {
+                // Linking to existing project
+                const existing = existingProjects.find(p => p.parentProject === parentProject);
+                if (existing) {
+                    finalParentProject = existing.parentProject;
+                    finalProjectId = existing.projectId;
+                }
+            }
+            // else: standalone card, both remain null
+
+            const cardData = {
+                title: title.trim(),
+                format,
+                parentProject: finalParentProject,
+                projectId: finalProjectId
+            };
+
+            onSubmit(cardData);
             setTitle('');
+            setParentProject('');
+            setIsNewProject(false);
+            setFormat('hero-video');
         }
     };
 
+    // Get unique parent projects from existing items
+    const uniqueProjects = [...new Set(existingProjects.filter(p => p.parentProject).map(p => p.parentProject))];
+
     return (
         <form onSubmit={handleSubmit} className="bg-onyx p-3 rounded-xl border border-orange-brand/30">
+            {/* Title */}
             <input
                 ref={inputRef}
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter card title..."
+                placeholder="Enter deliverable title..."
                 className="w-full bg-transparent text-white-smoke text-sm outline-none placeholder-white-smoke/30 mb-2"
                 onKeyDown={(e) => e.key === 'Escape' && onCancel()}
             />
+
+            {/* Format Selection */}
+            <div className="flex gap-1 mb-2 flex-wrap">
+                {VIDEO_FORMATS.slice(0, 4).map(fmt => {
+                    const Icon = fmt.icon;
+                    return (
+                        <button
+                            key={fmt.id}
+                            type="button"
+                            onClick={() => setFormat(fmt.id)}
+                            className={`px-2 py-1 rounded text-[10px] flex items-center gap-1 transition-all ${format === fmt.id
+                                ? fmt.color + ' ring-1 ring-current'
+                                : 'bg-white-smoke/5 text-white-smoke/40 hover:bg-white-smoke/10'
+                                }`}
+                        >
+                            <Icon className="w-3 h-3" />
+                            {fmt.label}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Parent Project - Dropdown for scalability */}
+            <div className="mb-2">
+                <div className="flex items-center gap-2 text-[10px] text-white-smoke/40 mb-1">
+                    <FolderOpen className="w-3 h-3" />
+                    <span>Parent Project:</span>
+                </div>
+                <select
+                    value={isNewProject ? '__new__' : (parentProject || '__standalone__')}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '__new__') {
+                            setIsNewProject(true);
+                            setParentProject('');
+                        } else if (val === '__standalone__') {
+                            setIsNewProject(false);
+                            setParentProject('');
+                        } else {
+                            setIsNewProject(false);
+                            setParentProject(val);
+                        }
+                    }}
+                    className="w-full bg-onyx text-white-smoke text-xs p-2 rounded-lg outline-none border border-white-smoke/10 focus:border-violet-500/50 cursor-pointer"
+                >
+                    <option value="__standalone__" className="bg-onyx">Standalone (no parent)</option>
+                    {uniqueProjects.length > 0 && (
+                        <optgroup label="Existing Projects" className="bg-onyx">
+                            {uniqueProjects.map(proj => (
+                                <option key={proj} value={proj} className="bg-onyx">
+                                    {proj}
+                                </option>
+                            ))}
+                        </optgroup>
+                    )}
+                    <option value="__new__" className="bg-onyx text-violet-400">+ Create New Project...</option>
+                </select>
+                {isNewProject && (
+                    <input
+                        type="text"
+                        value={parentProject}
+                        onChange={(e) => setParentProject(e.target.value)}
+                        placeholder="Enter new project name..."
+                        className="w-full mt-1.5 bg-violet-500/10 text-violet-300 text-xs p-2 rounded-lg outline-none border border-violet-500/30 placeholder-violet-400/40"
+                        autoFocus
+                    />
+                )}
+            </div>
+
             <div className="flex gap-2">
                 <button
                     type="submit"
@@ -480,13 +670,21 @@ const CelebrationOverlay = ({ show, onComplete }) => {
 };
 
 // Droppable Column Component
-const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard, onStatusChange }) => {
+const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard, onStatusChange, forceAddCard, onForceAddCardHandled, allItems = [] }) => {
     const [isAdding, setIsAdding] = useState(false);
     const cardIds = cards.map(c => c.id);
     const colors = COLUMN_COLORS[id] || COLUMN_COLORS.scripting;
 
-    const handleAddSubmit = (cardTitle) => {
-        onAddCard(cardTitle);
+    // Handle keyboard-triggered add card
+    useEffect(() => {
+        if (forceAddCard) {
+            setIsAdding(true);
+            onForceAddCardHandled?.();
+        }
+    }, [forceAddCard, onForceAddCardHandled]);
+
+    const handleAddSubmit = (cardData) => {
+        onAddCard(cardData);
         setIsAdding(false);
     };
 
@@ -497,9 +695,14 @@ const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard, onStatusCha
                 <h3 className={`font-heading font-bold uppercase tracking-wider text-sm ${colors.text}`}>
                     {title}
                 </h3>
-                <span className={`text-xs font-bold ${colors.text} px-2 py-0.5 rounded-full bg-black/20`}>
-                    {cards.length}
-                </span>
+                <div className="flex items-center gap-2">
+                    {id === 'scripting' && (
+                        <span className="text-[9px] text-white-smoke/20 font-mono" title="Press 'n' to add new card">n</span>
+                    )}
+                    <span className={`text-xs font-bold ${colors.text} px-2 py-0.5 rounded-full bg-black/20`}>
+                        {cards.length}
+                    </span>
+                </div>
             </div>
 
             {/* Scrollable Cards Area */}
@@ -529,6 +732,7 @@ const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard, onStatusCha
                     <AddCardForm
                         onSubmit={handleAddSubmit}
                         onCancel={() => setIsAdding(false)}
+                        existingProjects={allItems}
                     />
                 ) : (
                     <button
@@ -544,7 +748,7 @@ const DroppableColumn = ({ id, title, cards, onCardClick, onAddCard, onStatusCha
 };
 
 // Stage Timeline Component - Visual Pipeline Progress
-const StageTimeline = ({ currentStage, stageStatus, stageHistory }) => {
+const StageTimeline = ({ currentStage, stageStatus, stageHistory, currentVersion = 1 }) => {
     const stages = ['scripting', 'production', 'qa', 'done'];
     const stageLabels = { scripting: 'Script', production: 'Production', qa: 'QA', done: 'Done' };
 
@@ -561,14 +765,29 @@ const StageTimeline = ({ currentStage, stageStatus, stageHistory }) => {
         return stageHistory?.find(h => h.stage === stage);
     };
 
+    // Calculate total versions across all completed stages + current
+    const completedVersions = stageHistory?.reduce((sum, h) => sum + (h.finalVersion || 1), 0) || 0;
+    const totalVersions = completedVersions + currentVersion;
+
     return (
         <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
-            <h3 className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-4">Pipeline Progress</h3>
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold">Pipeline Progress</h3>
+                {totalVersions > (stageHistory?.length || 0) + 1 && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-white-smoke/30">Total Versions:</span>
+                        <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[10px] font-bold">
+                            {totalVersions}
+                        </span>
+                    </div>
+                )}
+            </div>
             <div className="flex items-start justify-between gap-2">
                 {stages.map((stage, idx) => {
                     const state = getStageState(stage);
                     const history = getHistoryForStage(stage);
                     const isLast = idx === stages.length - 1;
+                    const isCurrentStage = stage === currentStage;
 
                     return (
                         <div key={stage} className="flex items-center flex-1">
@@ -578,7 +797,7 @@ const StageTimeline = ({ currentStage, stageStatus, stageHistory }) => {
                                     state === 'approved' ? 'bg-emerald-500/30 border-emerald-500 text-emerald-400' :
                                         state === 'in_progress' ? 'bg-blue-500/30 border-blue-500 text-blue-400' :
                                             state === 'review' ? 'bg-amber-500/30 border-amber-500 text-amber-400' :
-                                                state === 'not_started' && stage === currentStage ? 'bg-slate-500/30 border-slate-400 text-slate-400' :
+                                                state === 'not_started' && isCurrentStage ? 'bg-slate-500/30 border-slate-400 text-slate-400' :
                                                     'bg-white-smoke/5 border-white-smoke/20 text-white-smoke/30'
                                     }`}>
                                     {state === 'completed' ? '✓' :
@@ -591,24 +810,31 @@ const StageTimeline = ({ currentStage, stageStatus, stageHistory }) => {
                                 <span className={`text-[10px] font-bold uppercase mt-2 ${state === 'completed' || state === 'approved' ? 'text-emerald-400' :
                                     state === 'in_progress' ? 'text-blue-400' :
                                         state === 'review' ? 'text-amber-400' :
-                                            state === 'not_started' && stage === currentStage ? 'text-slate-400' :
+                                            state === 'not_started' && isCurrentStage ? 'text-slate-400' :
                                                 'text-white-smoke/30'
                                     }`}>
                                     {stageLabels[stage]}
                                 </span>
 
-                                {/* History Info */}
+                                {/* History Info - For completed stages */}
                                 {history && (
                                     <div className="text-[9px] text-white-smoke/40 mt-1 text-center">
-                                        <div>REV {history.revision}</div>
+                                        {history.finalVersion > 1 && (
+                                            <div className="text-amber-400/70 font-bold">V{history.finalVersion}</div>
+                                        )}
                                         <div>{history.date}</div>
                                     </div>
                                 )}
 
-                                {/* Current Stage Status */}
-                                {stage === currentStage && state !== 'completed' && (
-                                    <div className="text-[9px] text-white-smoke/40 mt-1">
-                                        {STATUS_CONFIG[stageStatus]?.label || 'Pending'}
+                                {/* Current Stage Info - Show current version */}
+                                {isCurrentStage && state !== 'completed' && (
+                                    <div className="text-[9px] mt-1 text-center">
+                                        <div className={`font-bold ${currentVersion > 1 ? 'text-amber-400' : 'text-white-smoke/40'}`}>
+                                            {currentVersion > 1 ? `V${currentVersion}` : 'V1'}
+                                        </div>
+                                        <div className="text-white-smoke/30 text-[8px]">
+                                            {STATUS_CONFIG[stageStatus]?.label}
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -628,10 +854,10 @@ const StageTimeline = ({ currentStage, stageStatus, stageHistory }) => {
     );
 };
 
-// Team Activity Component - Comments and Status Changes
+// Team Activity Component - Split into Activity Log + Team Chat
 const TeamActivity = ({ activity = [], onAddComment }) => {
     const [newComment, setNewComment] = useState('');
-    const activityEndRef = useRef(null);
+    const chatEndRef = useRef(null);
 
     const formatTime = (timestamp) => {
         const date = new Date(timestamp);
@@ -643,11 +869,6 @@ const TeamActivity = ({ activity = [], onAddComment }) => {
         return `${days}d ago`;
     };
 
-    // Auto-scroll to bottom when new activity added
-    useEffect(() => {
-        activityEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [activity.length]);
-
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!newComment.trim()) return;
@@ -655,88 +876,151 @@ const TeamActivity = ({ activity = [], onAddComment }) => {
         setNewComment('');
     };
 
-    // Sort oldest first so newest appears at bottom
-    const sortedActivity = [...activity].sort((a, b) =>
-        new Date(a.timestamp) - new Date(b.timestamp)
-    );
+    // Format stage names consistently
+    const formatStageName = (stage) => {
+        const stageMap = {
+            scripting: 'Script',
+            production: 'Production',
+            qa: 'QA',
+            done: 'Done'
+        };
+        return stageMap[stage?.toLowerCase()] || stage;
+    };
+
+    // Separate activity types
+    const activityLogs = activity.filter(item =>
+        item.type === 'status_change' || item.type === 'stage_change' || item.type === 'revision_request'
+    ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Newest first for logs
+
+    const chatMessages = activity.filter(item => item.type === 'comment')
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)); // Oldest first for chat
+
+    // Auto-scroll chat to bottom when new message added
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages.length]);
 
     return (
-        <div className="bg-cyan-blue/30 rounded-xl border border-white-smoke/5 flex flex-col h-full">
-            <div className="p-3 border-b border-white-smoke/5">
-                <h3 className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold">Team Activity</h3>
-            </div>
-
-            {/* Activity List - Newest at bottom */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0 scrollbar-thin">
-                {sortedActivity.length === 0 ? (
-                    <div className="text-center text-white-smoke/30 text-xs py-8">
-                        No activity yet. Be the first to comment!
-                    </div>
-                ) : (
-                    sortedActivity.map((item, index) => (
-                        <div
-                            key={item.id}
-                            className={`text-sm ${index === sortedActivity.length - 1 ? 'animate-fadeInUp' : ''}`}
-                        >
-                            {item.type === 'comment' ? (
-                                <div className="bg-onyx rounded-lg p-3">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-white-smoke font-medium text-xs">{item.author}</span>
-                                        <span className="text-white-smoke/30 text-[10px]">{formatTime(item.timestamp)}</span>
-                                    </div>
-                                    <p className="text-white-smoke/70 text-xs leading-relaxed">{item.content}</p>
-                                </div>
-                            ) : item.type === 'status_change' ? (
-                                <div className="flex items-center gap-2 text-[10px] text-white-smoke/40 py-1 flex-wrap">
-                                    <span className="font-medium text-white-smoke/60">{item.author}</span>
-                                    <span>changed status</span>
-                                    <span className="px-1.5 py-0.5 rounded bg-white-smoke/10">{item.from}</span>
-                                    <span>→</span>
-                                    <span className="px-1.5 py-0.5 rounded bg-white-smoke/10">{item.to}</span>
-                                </div>
-                            ) : item.type === 'stage_change' ? (
-                                <div className="flex items-center gap-2 text-[10px] text-white-smoke/40 py-1 flex-wrap">
-                                    <span className="font-medium text-emerald-400">{item.author}</span>
-                                    <span>approved</span>
-                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">{item.from}</span>
-                                    <span>→</span>
-                                    <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">{item.to}</span>
-                                </div>
-                            ) : null}
-                        </div>
-                    ))
-                )}
-                <div ref={activityEndRef} />
-            </div>
-
-            {/* Add Comment */}
-            <form onSubmit={handleSubmit} className="p-3 border-t border-white-smoke/5">
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Add a comment..."
-                        className="flex-1 bg-onyx p-2 rounded-lg text-white-smoke text-xs outline-none border border-white-smoke/10 focus:border-orange-brand/50"
-                    />
-                    <button
-                        type="submit"
-                        disabled={!newComment.trim()}
-                        className="px-3 py-2 bg-orange-brand/20 text-orange-brand rounded-lg text-xs font-medium hover:bg-orange-brand/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Send
-                    </button>
+        <div className="flex flex-col h-full gap-3">
+            {/* Activity Log - Compact (30%) */}
+            <div className="h-[30%] flex flex-col bg-cyan-blue/30 rounded-xl border border-white-smoke/5 min-h-0">
+                <div className="p-2 border-b border-white-smoke/5 flex-shrink-0">
+                    <h3 className="text-[10px] uppercase tracking-wider text-white-smoke/40 font-bold flex items-center gap-2">
+                        <Clock className="w-3 h-3" />
+                        Activity Log
+                        {activityLogs.length > 0 && (
+                            <span className="px-1.5 py-0.5 bg-white-smoke/10 rounded text-[9px]">{activityLogs.length}</span>
+                        )}
+                    </h3>
                 </div>
-            </form>
+                <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-0 scrollbar-thin">
+                    {activityLogs.length === 0 ? (
+                        <div className="text-center text-white-smoke/20 text-[10px] py-4">
+                            No activity yet
+                        </div>
+                    ) : (
+                        activityLogs.map(item => (
+                            <div key={item.id} className="text-[9px] text-white-smoke/40 py-1 border-b border-white-smoke/5 last:border-0">
+                                {item.type === 'status_change' ? (
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-white-smoke/50">{item.author}</span>
+                                        <span className="px-1 py-0.5 rounded bg-white-smoke/10">{item.from}</span>
+                                        <span>→</span>
+                                        <span className="px-1 py-0.5 rounded bg-white-smoke/10">{item.to}</span>
+                                        {item.version > 1 && (
+                                            <span className="px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">V{item.version}</span>
+                                        )}
+                                        <span className="text-white-smoke/20 ml-auto">{formatTime(item.timestamp)}</span>
+                                    </div>
+                                ) : item.type === 'stage_change' ? (
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-emerald-400">{item.author}</span>
+                                        <span className="text-emerald-400/60">approved</span>
+                                        <span className="px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400">{formatStageName(item.from)}</span>
+                                        <span>→</span>
+                                        <span className="px-1 py-0.5 rounded bg-blue-500/20 text-blue-400">{formatStageName(item.to)}</span>
+                                        <span className="text-white-smoke/20 ml-auto">{formatTime(item.timestamp)}</span>
+                                    </div>
+                                ) : item.type === 'revision_request' ? (
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-amber-400">{item.author}</span>
+                                        <span className="text-amber-400/60">revision</span>
+                                        <span className="px-1 py-0.5 rounded bg-white-smoke/10">{formatStageName(item.stage)}</span>
+                                        <span className="px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">V{item.fromVersion} → V{item.toVersion}</span>
+                                        <span className="text-white-smoke/20 ml-auto">{formatTime(item.timestamp)}</span>
+                                    </div>
+                                ) : null}
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+
+            {/* Team Chat - Larger (70%) */}
+            <div className="flex-1 flex flex-col bg-cyan-blue/30 rounded-xl border border-white-smoke/5 min-h-0">
+                <div className="p-2 border-b border-white-smoke/5 flex-shrink-0">
+                    <h3 className="text-[10px] uppercase tracking-wider text-white-smoke/40 font-bold flex items-center gap-2">
+                        <MessageCircle className="w-3 h-3" />
+                        Team Chat
+                        {chatMessages.length > 0 && (
+                            <span className="px-1.5 py-0.5 bg-white-smoke/10 rounded text-[9px]">{chatMessages.length}</span>
+                        )}
+                    </h3>
+                </div>
+
+                {/* Chat Messages */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0 scrollbar-thin">
+                    {chatMessages.length === 0 ? (
+                        <div className="text-center text-white-smoke/30 text-xs py-8">
+                            No messages yet. Start the conversation!
+                        </div>
+                    ) : (
+                        chatMessages.map((item, index) => (
+                            <div
+                                key={item.id}
+                                className={`bg-onyx rounded-lg p-3 ${index === chatMessages.length - 1 ? 'animate-fadeInUp' : ''}`}
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-white-smoke font-medium text-xs">{item.author}</span>
+                                    <span className="text-white-smoke/30 text-[10px]">{formatTime(item.timestamp)}</span>
+                                </div>
+                                <p className="text-white-smoke/70 text-xs leading-relaxed">{item.content}</p>
+                            </div>
+                        ))
+                    )}
+                    <div ref={chatEndRef} />
+                </div>
+
+                {/* Message Input */}
+                <form onSubmit={handleSubmit} className="p-3 border-t border-white-smoke/5 flex-shrink-0">
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={newComment}
+                            onChange={(e) => setNewComment(e.target.value)}
+                            placeholder="Type a message..."
+                            className="flex-1 bg-onyx p-2.5 rounded-lg text-white-smoke text-xs outline-none border border-white-smoke/10 focus:border-orange-brand/50"
+                        />
+                        <button
+                            type="submit"
+                            disabled={!newComment.trim()}
+                            className="px-4 py-2.5 bg-orange-brand/20 text-orange-brand rounded-lg text-xs font-medium hover:bg-orange-brand/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        >
+                            Send
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 };
 
 // Enhanced Card Detail Modal - Professional Full-Screen
-const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
+const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers, externalEditTitle, onStatusChange, allItems = [] }) => {
     const [localCard, setLocalCard] = useState(card);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [newChecklistItem, setNewChecklistItem] = useState('');
+    const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
     const titleInputRef = useRef(null);
 
     useEffect(() => {
@@ -749,6 +1033,13 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
             titleInputRef.current.select();
         }
     }, [isEditingTitle]);
+
+    // Handle external edit trigger (keyboard shortcut 'e')
+    useEffect(() => {
+        if (externalEditTitle) {
+            setIsEditingTitle(true);
+        }
+    }, [externalEditTitle]);
 
     if (!card) return null;
 
@@ -796,6 +1087,20 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
 
     const handleAssign = (member) => {
         updateCard({ assignee: localCard.assignee === member ? null : member });
+    };
+
+    // Collaborators multi-select handler
+    const handleCollaboratorToggle = (member) => {
+        const currentCollabs = localCard.collaborators || [];
+        const isSelected = currentCollabs.includes(member);
+        const newCollabs = isSelected
+            ? currentCollabs.filter(c => c !== member)
+            : [...currentCollabs, member];
+        updateCard({ collaborators: newCollabs });
+    };
+
+    const clearAllCollaborators = () => {
+        updateCard({ collaborators: [] });
     };
 
     // Add comment handler
@@ -855,12 +1160,23 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                                     className="text-xl font-bold text-white-smoke font-heading bg-transparent outline-none border-b-2 border-orange-brand w-full"
                                 />
                             ) : (
-                                <h2
-                                    className="text-xl font-bold text-white-smoke font-heading cursor-pointer hover:text-orange-brand truncate"
-                                    onClick={() => setIsEditingTitle(true)}
-                                >
-                                    {localCard.title}
-                                </h2>
+                                <div>
+                                    {/* Parent Project Badge */}
+                                    {localCard.parentProject && (
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <span className="text-[10px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-400 font-medium flex items-center gap-1">
+                                                <FolderOpen className="w-3 h-3" />
+                                                {localCard.parentProject}
+                                            </span>
+                                        </div>
+                                    )}
+                                    <h2
+                                        className="text-xl font-bold text-white-smoke font-heading cursor-pointer hover:text-orange-brand truncate"
+                                        onClick={() => setIsEditingTitle(true)}
+                                    >
+                                        {localCard.title}
+                                    </h2>
+                                </div>
                             )}
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 {localCard.client && (
@@ -881,10 +1197,33 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        {/* Version Badge */}
+                        <div className={`px-3 py-1.5 rounded-lg text-xs font-bold ${(localCard.stageVersion || 1) > 1 ? 'bg-amber-500/20 text-amber-400' : 'bg-white-smoke/10 text-white-smoke/50'}`}>
+                            V{localCard.stageVersion || 1}
+                        </div>
+
                         {/* Status Badge */}
                         <div className={`px-3 py-1.5 rounded-lg text-xs font-bold ${statusInfo.color} border border-current/30`}>
                             {statusInfo.icon} {statusInfo.label}
                         </div>
+
+                        {/* Version Control Buttons */}
+                        {stageStatus === 'in_progress' && (
+                            <button
+                                onClick={() => onStatusChange?.(localCard.id, 'review')}
+                                className="px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg text-xs font-bold hover:bg-amber-500/30 transition-all"
+                            >
+                                Submit V{localCard.stageVersion || 1} for Review
+                            </button>
+                        )}
+                        {stageStatus === 'review' && (
+                            <button
+                                onClick={() => onStatusChange?.(localCard.id, 'in_progress')}
+                                className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs font-bold hover:bg-red-500/30 transition-all"
+                            >
+                                Request Revision → V{(localCard.stageVersion || 1) + 1}
+                            </button>
+                        )}
 
                         {/* Days Remaining */}
                         {daysLeft !== null && localCard.stage !== 'done' && (
@@ -908,12 +1247,128 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                     {/* Left Column - Project Details (60%) */}
                     <div className="w-3/5 overflow-y-auto p-6 space-y-6 border-r border-white-smoke/5">
 
+                        {/* Thumbnail Section */}
+                        <div className="bg-cyan-blue/30 rounded-xl overflow-hidden border border-white-smoke/5">
+                            {localCard.thumbnail ? (
+                                <div className="relative group">
+                                    <img
+                                        src={localCard.thumbnail}
+                                        alt={localCard.title}
+                                        className="w-full h-40 object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
+                                        <button
+                                            onClick={() => {
+                                                const url = prompt('Enter thumbnail URL:', localCard.thumbnail);
+                                                if (url !== null) updateCard({ thumbnail: url || null });
+                                            }}
+                                            className="px-3 py-1.5 bg-white-smoke/10 text-white-smoke rounded-lg text-xs font-medium hover:bg-white-smoke/20"
+                                        >
+                                            Change
+                                        </button>
+                                        <button
+                                            onClick={() => updateCard({ thumbnail: null })}
+                                            className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/30"
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div
+                                    className="h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-white-smoke/5 transition-all"
+                                    onClick={() => {
+                                        const url = prompt('Enter thumbnail URL:');
+                                        if (url) updateCard({ thumbnail: url });
+                                    }}
+                                    style={{
+                                        background: localCard.format === 'hero-video'
+                                            ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(234, 88, 12, 0.1) 100%)'
+                                            : localCard.format === 'bts-short'
+                                                ? 'linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(219, 39, 119, 0.1) 100%)'
+                                                : 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%)'
+                                    }}
+                                >
+                                    {(() => {
+                                        const format = VIDEO_FORMATS.find(f => f.id === localCard.format) || VIDEO_FORMATS[0];
+                                        const FormatIcon = format.icon;
+                                        return <FormatIcon className="w-10 h-10 text-white-smoke/15 mb-2" />;
+                                    })()}
+                                    <span className="text-xs text-white-smoke/30">Click to add thumbnail</span>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Stage Timeline */}
                         <StageTimeline
                             currentStage={localCard.stage}
                             stageStatus={stageStatus}
                             stageHistory={localCard.stageHistory || []}
+                            currentVersion={localCard.stageVersion || 1}
                         />
+
+                        {/* Related Deliverables (for multi-deliverable projects) */}
+                        {localCard.projectId && (() => {
+                            const siblings = allItems.filter(item =>
+                                item.projectId === localCard.projectId && item.id !== localCard.id
+                            );
+                            if (siblings.length === 0) return null;
+
+                            const stageColors = {
+                                scripting: 'text-amber-400',
+                                production: 'text-blue-400',
+                                qa: 'text-violet-400',
+                                done: 'text-emerald-400'
+                            };
+
+                            return (
+                                <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
+                                    <h3 className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-3 flex items-center gap-2">
+                                        <FolderOpen className="w-3.5 h-3.5" />
+                                        Related Deliverables
+                                        <span className="px-1.5 py-0.5 bg-violet-500/20 text-violet-400 rounded text-[10px]">
+                                            {siblings.length + 1} total
+                                        </span>
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {siblings.map(sibling => {
+                                            const sibFormat = VIDEO_FORMATS.find(f => f.id === sibling.format) || VIDEO_FORMATS[0];
+                                            const SibIcon = sibFormat.icon;
+                                            return (
+                                                <div
+                                                    key={sibling.id}
+                                                    className="flex items-center justify-between p-2 bg-onyx rounded-lg hover:bg-white-smoke/5 transition-all cursor-pointer"
+                                                    onClick={() => {
+                                                        // Update to show sibling card
+                                                        setLocalCard(sibling);
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                        <div className={`p-1.5 rounded ${sibFormat.color}`}>
+                                                            <SibIcon className="w-3.5 h-3.5" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="text-sm font-medium text-white-smoke truncate">{sibling.title}</div>
+                                                            <div className="text-[10px] text-white-smoke/40">@{sibling.assignee}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`text-[10px] font-bold uppercase ${stageColors[sibling.stage]}`}>
+                                                            {sibling.stage}
+                                                        </span>
+                                                        {sibling.stageVersion > 1 && (
+                                                            <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[9px] font-bold">
+                                                                V{sibling.stageVersion}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })()}
 
                         {/* Description */}
                         <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
@@ -1011,6 +1466,51 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                             </div>
                         </div>
 
+                        {/* Collaborators - Multi-select */}
+                        <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
+                            <div className="flex items-center justify-between mb-3">
+                                <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold">
+                                    Collaborators
+                                    {(localCard.collaborators?.length > 0) && (
+                                        <span className="ml-2 px-1.5 py-0.5 bg-violet-500/20 text-violet-400 rounded text-[10px]">
+                                            {localCard.collaborators.length}
+                                        </span>
+                                    )}
+                                </label>
+                                {localCard.collaborators?.length > 0 && (
+                                    <button
+                                        onClick={clearAllCollaborators}
+                                        className="text-[10px] text-white-smoke/40 hover:text-red-400 transition-colors"
+                                    >
+                                        Clear All
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {teamMembers?.filter(m => m !== localCard.assignee).map(member => {
+                                    const isSelected = localCard.collaborators?.includes(member);
+                                    return (
+                                        <button
+                                            key={member}
+                                            onClick={() => handleCollaboratorToggle(member)}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all flex items-center gap-1.5 ${isSelected
+                                                ? 'bg-violet-500/20 text-violet-400 border-violet-500/50'
+                                                : 'border-white-smoke/10 text-white-smoke/40 hover:border-white-smoke/30'
+                                                }`}
+                                        >
+                                            {isSelected && <span className="text-[10px]">✓</span>}
+                                            {member}
+                                        </button>
+                                    );
+                                })}
+                                {teamMembers?.filter(m => m !== localCard.assignee).length === 0 && (
+                                    <span className="text-xs text-white-smoke/30 italic">
+                                        Select an assignee first to add collaborators
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Deliverables / Checklist */}
                         <div className="bg-cyan-blue/30 rounded-xl p-4 border border-white-smoke/5">
                             <label className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-3 block">Deliverables</label>
@@ -1051,31 +1551,49 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                         {/* Quick Links */}
                         <div className="p-4 border-b border-white-smoke/5 flex-shrink-0">
                             <h3 className="text-xs uppercase tracking-wider text-white-smoke/40 font-bold mb-3">Quick Links</h3>
-                            <div className="flex gap-2">
+                            <div className="grid grid-cols-3 gap-2">
+                                {/* Drive Link */}
                                 {localCard.driveLink ? (
                                     <a href={localCard.driveLink} target="_blank" rel="noopener noreferrer"
-                                        className="flex-1 px-3 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 flex items-center justify-center gap-2 text-xs font-medium">
+                                        className="px-3 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 flex items-center justify-center gap-2 text-xs font-medium">
                                         <FolderOpen className="w-4 h-4" /> Drive
                                     </a>
                                 ) : (
                                     <button onClick={() => {
                                         const url = prompt('Enter Google Drive link:');
                                         if (url) updateCard({ driveLink: url });
-                                    }} className="flex-1 px-3 py-2 bg-white-smoke/5 text-white-smoke/40 rounded-lg hover:bg-white-smoke/10 flex items-center justify-center gap-2 text-xs">
-                                        <FolderOpen className="w-4 h-4" /> Add Drive
+                                    }} className="px-3 py-2 bg-white-smoke/5 text-white-smoke/40 rounded-lg hover:bg-white-smoke/10 flex items-center justify-center gap-2 text-xs">
+                                        <FolderOpen className="w-4 h-4" /> Drive
                                     </button>
                                 )}
+
+                                {/* Script Link */}
                                 {localCard.scriptLink ? (
                                     <a href={localCard.scriptLink} target="_blank" rel="noopener noreferrer"
-                                        className="flex-1 px-3 py-2 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 flex items-center justify-center gap-2 text-xs font-medium">
+                                        className="px-3 py-2 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 flex items-center justify-center gap-2 text-xs font-medium">
                                         <FileText className="w-4 h-4" /> Script
                                     </a>
                                 ) : (
                                     <button onClick={() => {
                                         const url = prompt('Enter Script (Google Docs) link:');
                                         if (url) updateCard({ scriptLink: url });
-                                    }} className="flex-1 px-3 py-2 bg-white-smoke/5 text-white-smoke/40 rounded-lg hover:bg-white-smoke/10 flex items-center justify-center gap-2 text-xs">
-                                        <FileText className="w-4 h-4" /> Add Script
+                                    }} className="px-3 py-2 bg-white-smoke/5 text-white-smoke/40 rounded-lg hover:bg-white-smoke/10 flex items-center justify-center gap-2 text-xs">
+                                        <FileText className="w-4 h-4" /> Script
+                                    </button>
+                                )}
+
+                                {/* Export/Final Delivery Link */}
+                                {localCard.exportLink ? (
+                                    <a href={localCard.exportLink} target="_blank" rel="noopener noreferrer"
+                                        className="px-3 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 flex items-center justify-center gap-2 text-xs font-medium">
+                                        <ExternalLink className="w-4 h-4" /> Export
+                                    </a>
+                                ) : (
+                                    <button onClick={() => {
+                                        const url = prompt('Enter Export/Final Delivery link (for client):');
+                                        if (url) updateCard({ exportLink: url });
+                                    }} className="px-3 py-2 bg-white-smoke/5 text-white-smoke/40 rounded-lg hover:bg-white-smoke/10 flex items-center justify-center gap-2 text-xs">
+                                        <ExternalLink className="w-4 h-4" /> Export
                                     </button>
                                 )}
                             </div>
@@ -1094,7 +1612,7 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                 {/* Footer */}
                 <div className="p-4 border-t border-white-smoke/10 bg-cyan-blue/20 flex justify-between flex-shrink-0">
                     <button
-                        onClick={() => { onDelete?.(localCard.id); onClose(); }}
+                        onClick={() => setShowArchiveConfirm(true)}
                         className="px-4 py-2 text-red-400 hover:bg-red-500/10 rounded-lg text-sm font-medium flex items-center gap-2"
                     >
                         <Trash2 className="w-4 h-4" /> Archive
@@ -1134,6 +1652,58 @@ const CardModal = ({ card, onClose, onUpdate, onDelete, teamMembers }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Archive Confirmation Modal */}
+            {showArchiveConfirm && (
+                <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-50 rounded-2xl">
+                    <div className="bg-onyx border border-white-smoke/10 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 bg-amber-500/20 rounded-full">
+                                <Trash2 className="w-6 h-6 text-amber-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-white-smoke font-bold text-lg">Archive this card?</h3>
+                                <p className="text-white-smoke/50 text-sm">"{localCard.title}"</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-6">
+                            <p className="text-amber-400 text-sm">
+                                ⚠️ Archived cards will be <strong>automatically deleted after 5 days</strong>.
+                                You can view archived cards from the board filter.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowArchiveConfirm(false)}
+                                className="flex-1 px-4 py-2.5 bg-white-smoke/10 text-white-smoke rounded-lg text-sm font-medium hover:bg-white-smoke/20"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    // Archive with timestamp
+                                    onUpdate?.({ ...localCard, archived: true, archivedAt: new Date().toISOString() });
+                                    onClose();
+                                }}
+                                className="flex-1 px-4 py-2.5 bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/30 border border-amber-500/30"
+                            >
+                                Archive
+                            </button>
+                            <button
+                                onClick={() => {
+                                    onDelete?.(localCard.id);
+                                    onClose();
+                                }}
+                                className="px-4 py-2.5 bg-red-500/20 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500/30 border border-red-500/30"
+                            >
+                                Delete Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -1154,6 +1724,11 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
     const [sortBy, setSortBy] = useState('default'); // default, priority, dueDate, complexity
     const currentUser = 'Alex'; // TODO: Get from auth context
 
+    // Keyboard shortcuts state
+    const [addCardColumn, setAddCardColumn] = useState(null); // Column to add card via keyboard
+    const searchInputRef = useRef(null);
+    const [isEditingModalTitle, setIsEditingModalTitle] = useState(false);
+
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -1164,6 +1739,58 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
             coordinateGetter: sortableKeyboardCoordinates,
         })
     );
+
+    // Global keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Don't trigger shortcuts when typing in inputs
+            const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);
+
+            if (e.key === 'Escape') {
+                // Always allow Escape to close modal
+                if (selectedCard) {
+                    setSelectedCard(null);
+                    e.preventDefault();
+                }
+                return;
+            }
+
+            // Skip other shortcuts if typing
+            if (isTyping) return;
+
+            switch (e.key.toLowerCase()) {
+                case 'n':
+                    // New card in first column (scripting)
+                    setAddCardColumn('scripting');
+                    e.preventDefault();
+                    break;
+                case '/':
+                    // Focus search
+                    searchInputRef.current?.focus();
+                    e.preventDefault();
+                    break;
+                case 'e':
+                    // Edit selected card title
+                    if (selectedCard) {
+                        setIsEditingModalTitle(true);
+                        e.preventDefault();
+                    }
+                    break;
+                case 'a':
+                    // Approve selected card (if in review status)
+                    if (selectedCard && selectedCard.stageStatus === 'review') {
+                        handleStatusChange(selectedCard.id, 'approved');
+                        e.preventDefault();
+                    }
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedCard]);
 
     const findColumn = (id) => {
         const card = items.find(item => item.id === id);
@@ -1229,6 +1856,7 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
         const urgencyOrder = { critical: 0, high: 1, medium: 2, low: 3, null: 4 };
 
         return items
+            .filter(item => !item.archived) // Exclude archived cards from board
             .filter(item => item.stage === columnId)
             .filter(item => {
                 if (!searchQuery.trim()) return true;
@@ -1262,21 +1890,28 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
             });
     };
 
-    const handleAddCard = (columnId, title) => {
+    const handleAddCard = (columnId, cardData) => {
         const columnCards = getColumnCards(columnId);
         const lastRank = columnCards[columnCards.length - 1]?.rank;
 
         const newCard = {
             id: `card-${Date.now()}`,
-            title: title,
+            title: cardData.title || cardData, // Support both object and string
             stage: columnId,
-            format: 'long-form',
+            format: cardData.format || 'long-form',
+            parentProject: cardData.parentProject || null,
+            projectId: cardData.projectId || null,
             rank: generateRank(lastRank, null),
-            checklists: [],
+            checklists: getDefaultChecklist(cardData.format || 'long-form'),
             description: '',
             assignee: null,
-            startDate: null,
-            dueDate: null
+            collaborators: [],
+            startDate: new Date().toISOString().split('T')[0],
+            dueDate: null,
+            stageStatus: 'not_started',
+            stageVersion: 1,
+            stageHistory: [],
+            activity: []
         };
 
         const newItems = [...items, newCard];
@@ -1303,30 +1938,50 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
         onUpdate?.(newItems);
     };
 
-    // Pipeline status change handler
+    // Pipeline status change handler - Per-Stage Versioning Logic
+    // Each stage has its own version (V1, V2, V3...)
+    // Version increments when returned from Review → In Progress
+    // Version resets to V1 when moving to next stage
     const handleStatusChange = (cardId, newStatus) => {
         const card = items.find(i => i.id === cardId);
         if (!card) return;
 
+        const currentUser = 'Admin'; // TODO: Get from auth context
+        const timestamp = new Date().toISOString();
         let updates = { stageStatus: newStatus };
+        let newActivity = [...(card.activity || [])];
 
-        // If approved, move to next stage
+        // CASE 1: Approved → Move to next stage, reset version to V1
         if (newStatus === 'approved') {
             const nextStage = getNextStage(card.stage);
             if (nextStage) {
-                // Record approval in stage history
+                const currentVersion = card.stageVersion || 1;
+
+                // Record stage completion in history with final version
                 const historyEntry = {
                     stage: card.stage,
-                    approvedBy: 'Admin', // TODO: Get from auth context
+                    approvedBy: currentUser,
                     date: new Date().toISOString().split('T')[0],
-                    revision: card.revision || 1
+                    finalVersion: currentVersion // Store final version for this stage
                 };
+
+                // Log stage approval to activity
+                newActivity.push({
+                    id: `act-${Date.now()}`,
+                    type: 'stage_change',
+                    author: currentUser,
+                    timestamp,
+                    from: card.stage,
+                    to: nextStage,
+                    version: currentVersion
+                });
 
                 updates = {
                     stage: nextStage,
                     stageStatus: 'not_started',
-                    revision: 1, // Reset revision for new stage
-                    stageHistory: [...(card.stageHistory || []), historyEntry]
+                    stageVersion: 1, // Reset to V1 for new stage
+                    stageHistory: [...(card.stageHistory || []), historyEntry],
+                    activity: newActivity
                 };
 
                 // Trigger celebration if moving to done
@@ -1335,15 +1990,63 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                 }
             }
         }
+        // CASE 2: Returned from Review → In Progress = Version++
+        else if (newStatus === 'in_progress' && card.stageStatus === 'review') {
+            const newVersion = (card.stageVersion || 1) + 1;
 
-        // If requesting revisions (back to in_progress), increment revision
-        if (newStatus === 'in_progress' && card.stageStatus === 'review') {
-            updates.revision = (card.revision || 1) + 1;
+            // Log revision request to activity
+            newActivity.push({
+                id: `act-${Date.now()}`,
+                type: 'revision_request',
+                author: currentUser,
+                timestamp,
+                stage: card.stage,
+                fromVersion: card.stageVersion || 1,
+                toVersion: newVersion
+            });
+
+            updates = {
+                stageStatus: 'in_progress',
+                stageVersion: newVersion,
+                activity: newActivity
+            };
+        }
+        // CASE 3: Submit for Review (In Progress → Review)
+        else if (newStatus === 'review' && card.stageStatus === 'in_progress') {
+            // Log submission to activity
+            newActivity.push({
+                id: `act-${Date.now()}`,
+                type: 'status_change',
+                author: currentUser,
+                timestamp,
+                from: 'In Progress',
+                to: 'In Review',
+                version: card.stageVersion || 1
+            });
+
+            updates = {
+                stageStatus: 'review',
+                activity: newActivity
+            };
+        }
+        // CASE 4: Start Work (Not Started → In Progress)
+        else if (newStatus === 'in_progress' && card.stageStatus === 'not_started') {
+            // Initialize version if not set
+            updates = {
+                stageStatus: 'in_progress',
+                stageVersion: card.stageVersion || 1
+            };
         }
 
         const updatedCard = { ...card, ...updates };
         const newItems = items.map(i => i.id === cardId ? updatedCard : i);
         setItems(newItems);
+
+        // Update selected card if it's the one being changed
+        if (selectedCard?.id === cardId) {
+            setSelectedCard(updatedCard);
+        }
+
         onUpdate?.(newItems);
     };
 
@@ -1354,19 +2057,22 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                 <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white-smoke/40" />
                     <input
+                        ref={searchInputRef}
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search cards by title, client, or assignee..."
-                        className="w-full bg-onyx border border-white-smoke/10 rounded-lg pl-10 pr-4 py-2 text-sm text-white-smoke placeholder-white-smoke/30 outline-none focus:border-orange-brand/50"
+                        placeholder="Search cards... (press / to focus)"
+                        className="w-full bg-onyx border border-white-smoke/10 rounded-lg pl-10 pr-12 py-2 text-sm text-white-smoke placeholder-white-smoke/30 outline-none focus:border-orange-brand/50"
                     />
-                    {searchQuery && (
+                    {searchQuery ? (
                         <button
                             onClick={() => setSearchQuery('')}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-white-smoke/40 hover:text-white-smoke"
                         >
                             <X className="w-4 h-4" />
                         </button>
+                    ) : (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-white-smoke/20 font-mono">/</span>
                     )}
                 </div>
 
@@ -1412,7 +2118,7 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                     onDragOver={handleDragOver}
                     onDragEnd={handleDragEnd}
                 >
-                    <div className="flex gap-6 min-w-max h-full">
+                    <div className="flex gap-8 min-w-max h-full">
                         {columns.map(col => (
                             <DroppableColumn
                                 key={col}
@@ -1420,8 +2126,11 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
                                 title={col}
                                 cards={getColumnCards(col)}
                                 onCardClick={setSelectedCard}
-                                onAddCard={(title) => handleAddCard(col, title)}
+                                onAddCard={(cardData) => handleAddCard(col, cardData)}
                                 onStatusChange={handleStatusChange}
+                                forceAddCard={addCardColumn === col}
+                                onForceAddCardHandled={() => setAddCardColumn(null)}
+                                allItems={items}
                             />
                         ))}
 
@@ -1448,10 +2157,16 @@ const ProductionBoard = ({ initialItems, teamMembers = [], onUpdate }) => {
             {selectedCard && (
                 <CardModal
                     card={selectedCard}
-                    onClose={() => setSelectedCard(null)}
+                    onClose={() => {
+                        setSelectedCard(null);
+                        setIsEditingModalTitle(false);
+                    }}
                     onUpdate={handleUpdateCard}
                     onDelete={handleDeleteCard}
                     teamMembers={teamMembers}
+                    externalEditTitle={isEditingModalTitle}
+                    onStatusChange={handleStatusChange}
+                    allItems={items}
                 />
             )}
 
