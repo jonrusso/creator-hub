@@ -34,17 +34,35 @@ Creator_hub/
 ├── docs/                       # Documentation & brand guidelines
 │   ├── Brand Guide Creators Club.pdf
 │   └── SOP_Creator-Hub.pdf
+├── extension/                  # Browser extension for Instagram integration
+│   ├── background.js
+│   ├── content/
+│   ├── popup/
+│   └── manifest.json
 ├── public/                     # Static assets
-│   └── assets/
-├── src/                        # Application source code
-│   ├── CreatorHub.jsx         # Main single-file application
+├── src/
+│   ├── components/            # Modular UI components
+│   │   ├── auth/              # Authentication components
+│   │   ├── boards/            # Production & Inspiration boards
+│   │   ├── common/            # Shared UI components (GlassCard, Button, etc.)
+│   │   ├── workflows/         # Workflow documentation module
+│   │   └── TeamModule.jsx     # Team management
+│   ├── context/               # React context providers
+│   ├── hooks/                 # Custom React hooks
+│   ├── services/
+│   │   ├── mock/              # Mock data for development
+│   │   └── supabase/          # Supabase service layer
+│   ├── styles/                # Additional stylesheets
+│   ├── CreatorHub.jsx         # Main application shell
 │   ├── main.jsx               # React entry point
-│   └── index.css              # Global styles
-├── index.html                 # HTML entry point
-├── package.json               # Dependencies
-├── tailwind.config.js         # Tailwind configuration (brand colors)
-├── vite.config.js             # Vite build configuration
-└── postcss.config.js          # PostCSS configuration
+│   └── index.css              # Global styles & design tokens
+├── supabase/
+│   ├── migrations/            # Database schema migrations
+│   └── functions/             # Edge functions
+├── .env.example               # Environment variables template
+├── package.json
+├── tailwind.config.js
+└── vite.config.js
 ```
 
 ## 🎨 Brand Identity
@@ -64,16 +82,23 @@ Creator_hub/
 
 ## 🏗️ Architecture
 
-### Current (V1)
-- **Authentication Layer**: Role-based access (Admin/Creator)
-- **Workflows Module**: Higgsfield Identity Synthesis wizard
-- **Production Boards**: Kanban/List views with QA checkboxes
-- **Inspiration Boards**: Masonry grid with visual references
+### Modules
 
-### Planned (V2)
-- **Workflows**: Multi-entry documentation database
-- **Boards**: Production + Inspiration as sub-modules
-- **Instagram Integration**: Curator/aggregator for multiple profiles
+| Module | Description | Features |
+|--------|-------------|----------|
+| **Workflows** | Documentation database for internal processes | Categories, search, create/edit, admin approval flow, step-by-step guides |
+| **Production Board** | Kanban-style project management | Drag-and-drop, stage management, complexity scoring, checklists, activity feed |
+| **Inspiration Board** | Visual reference library | Masonry grid, save/unsave, account tracking |
+| **Team** | User management (Admin only) | Invite members, role assignment, deactivation |
+
+### Backend
+- **Supabase** - PostgreSQL database with Row Level Security
+- **Services Layer** - Abstracted data access (works with mock or Supabase)
+- **Migrations** - Version-controlled schema changes
+
+### Planned Enhancements
+- **Browser Extension** - Instagram content scraping (scaffolding complete)
+- **Real-time Updates** - Supabase subscriptions for live collaboration
 
 ## 🔧 Tech Stack
 - **React 18.3.1** - UI framework
@@ -86,12 +111,37 @@ Creator_hub/
 - [SOP](./docs/SOP_Creator-Hub.pdf) - Standard Operating Procedures
 
 ## 🎭 Roles & Permissions
-- **Admin**: Full access to all modules, can manage workflows and boards
-- **Creator**: Can create/edit workflows, manipulate categories, view all content
+| Role | Workflows | Boards | Team |
+|------|-----------|--------|------|
+| **Admin** | Full access + Approval | Full access | Manage members |
+| **Editor** | Create/Edit | Full access | View only |
+| **Designer** | View | Full access | View only |
+
+## ⚙️ Environment Setup
+
+### Environment Variables
+Copy `.env.example` to `.env.local` and configure:
+```bash
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### Supabase Setup
+1. Create a new Supabase project
+2. Run migrations in order from `supabase/migrations/`
+3. Configure environment variables
 
 ## 📝 Development Status
-**Current Phase**: Concept/UX Validation  
-**Status**: V1 Complete ✅ | V2 Planning 🔄
+
+| Component | Status |
+|-----------|--------|
+| Frontend UI | ✅ Complete |
+| Mock Data Layer | ✅ Complete |
+| Supabase Schema | ✅ Complete |
+| Services Layer | ✅ Complete |
+| Browser Extension | 🔄 Scaffolding |
+
+**Current Phase**: Ready for First Deployment 🚀
 
 ## 📄 License
 Internal use only - Creators Club / Keanu Visuals

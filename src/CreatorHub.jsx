@@ -25,6 +25,26 @@ const WorkflowsModule = ({ userRole }) => {
 
     const isAdmin = userRole === 'admin';
 
+    // Create new workflow and navigate to edit mode
+    const handleCreateWorkflow = () => {
+        const newWorkflow = {
+            id: `wf-${Date.now()}`,
+            title: '',
+            description: '',
+            category: WORKFLOW_CATEGORIES[0].id,
+            coverImage: '',
+            estimatedTime: 15,
+            difficulty: 'beginner',
+            status: 'draft', // Draft until saved
+            author: isAdmin ? 'Keanu' : 'Team Member',
+            lastUpdated: new Date().toISOString().split('T')[0],
+            sections: [],
+            isNew: true // Flag for new workflow
+        };
+        setSelectedWorkflow(newWorkflow);
+        setView('detail');
+    };
+
     // Difficulty badge colors
     const getDifficultyStyle = (difficulty) => {
         switch (difficulty) {
@@ -45,25 +65,45 @@ const WorkflowsModule = ({ userRole }) => {
         return workflow.sections?.filter(s => s.type === 'step' && s.isRequired).length || 0;
     };
 
-    // Workflow Detail (Enhanced Doc View)
+    // Workflow Detail (Enhanced Doc View - Supports New Workflow Creation)
     const WorkflowDetail = ({ workflow, onBack }) => {
-        const [isEditing, setIsEditing] = useState(false);
+        const [isEditing, setIsEditing] = useState(workflow.isNew || false);
         const [localSections, setLocalSections] = useState(workflow.sections || []);
-        const [completedSteps, setCompletedSteps] = useState([]);
-        const category = getCategoryInfo(workflow.category);
-        const totalSteps = getStepCount(workflow);
-        const progress = totalSteps > 0 ? Math.round((completedSteps.length / totalSteps) * 100) : 0;
+        const [localMeta, setLocalMeta] = useState({
+            title: workflow.title || '',
+            description: workflow.description || '',
+            category: workflow.category || WORKFLOW_CATEGORIES[0].id,
+            estimatedTime: workflow.estimatedTime || 15,
+            difficulty: workflow.difficulty || 'beginner',
+            coverImage: workflow.coverImage || ''
+        });
+        const category = getCategoryInfo(localMeta.category);
+        const totalSteps = localSections.filter(s => s.type === 'step' && s.isRequired).length;
+        const isPending = workflow.status === 'pending_approval';
+        const isNew = workflow.isNew || false;
 
         const handleSave = () => {
+            if (!localMeta.title.trim()) {
+                alert('Please enter a title for your workflow');
+                return;
+            }
+            const savedWorkflow = {
+                ...workflow,
+                ...localMeta,
+                sections: localSections,
+                status: isNew ? (isAdmin ? 'published' : 'pending_approval') : workflow.status,
+                isNew: false
+            };
+            if (isNew) {
+                setDb(prev => [...prev, savedWorkflow]);
+                if (!isAdmin) {
+                    alert('Workflow submitted for approval! Keanu will review it.');
+                }
+            } else {
+                setDb(prev => prev.map(w => w.id === workflow.id ? savedWorkflow : w));
+            }
             setIsEditing(false);
-        };
-
-        const toggleStep = (stepId) => {
-            setCompletedSteps(prev =>
-                prev.includes(stepId)
-                    ? prev.filter(id => id !== stepId)
-                    : [...prev, stepId]
-            );
+            if (isNew) onBack();
         };
 
         const addSection = (type) => {
@@ -71,9 +111,21 @@ const WorkflowsModule = ({ userRole }) => {
             setLocalSections([...localSections, newSection]);
         };
 
+        // Approve/Reject workflow (admin only)
+        const handleApprove = () => {
+            setDb(prev => prev.map(w => w.id === workflow.id ? { ...w, status: 'published' } : w));
+            onBack();
+        };
+
+        const handleReject = () => {
+            if (confirm('Are you sure you want to reject this workflow?')) {
+                setDb(prev => prev.filter(w => w.id !== workflow.id));
+                onBack();
+            }
+        };
+
         const renderSection = (section, index) => {
             const isStep = section.type === 'step';
-            const isCompleted = completedSteps.includes(section.id);
 
             if (isEditing) {
                 return (
@@ -88,24 +140,18 @@ const WorkflowsModule = ({ userRole }) => {
                 <div key={section.id} className={`mb-6 last:mb-0 ${isStep ? 'pl-4 border-l-2 border-white-smoke/10' : ''}`}>
                     <div className="flex items-start gap-3">
                         {isStep && (
-                            <button
-                                onClick={() => toggleStep(section.id)}
-                                className={`mt-1 flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isCompleted
-                                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                                        : 'border-white-smoke/30 hover:border-orange-brand'
-                                    }`}
-                            >
-                                {isCompleted && <Check className="w-4 h-4" />}
-                            </button>
+                            <div className="mt-1 flex-shrink-0 w-6 h-6 rounded-full border-2 border-white-smoke/30 flex items-center justify-center">
+                                <span className="text-xs text-white-smoke/60">{index}</span>
+                            </div>
                         )}
                         <div className="flex-1">
-                            <h3 className={`text-white-smoke font-heading text-lg font-bold mb-2 flex items-center gap-2 ${isCompleted ? 'line-through opacity-50' : ''}`}>
+                            <h3 className="text-white-smoke font-heading text-lg font-bold mb-2 flex items-center gap-2">
                                 {isStep && <span className="text-orange-brand text-sm">Step {index}</span>}
                                 {section.title}
                                 {section.isRequired && <span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded">Required</span>}
                             </h3>
 
-                            <p className={`text-white-smoke/80 font-body leading-relaxed whitespace-pre-wrap mb-4 ${isCompleted ? 'opacity-50' : ''}`}>
+                            <p className="text-white-smoke/80 font-body leading-relaxed whitespace-pre-wrap mb-4">
                                 {section.content}
                             </p>
 
@@ -152,62 +198,141 @@ const WorkflowsModule = ({ userRole }) => {
 
         return (
             <div className="max-w-4xl mx-auto animate-fadeIn">
-                {/* Hero Header with Cover Image */}
+                {/* Hero Header with Cover Image (Editable when creating/editing) */}
                 <div className="relative rounded-2xl overflow-hidden mb-8">
-                    {workflow.coverImage && (
+                    {(localMeta.coverImage || !isEditing) && (
                         <div className="absolute inset-0">
-                            <img src={workflow.coverImage} alt="" className="w-full h-full object-cover" />
+                            <img src={localMeta.coverImage || 'https://images.unsplash.com/photo-1633356122102-3fe601e05bd2?w=800&auto=format'} alt="" className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-gradient-to-t from-onyx via-onyx/80 to-transparent" />
                         </div>
                     )}
-                    <div className="relative p-8 pt-24">
-                        <button onClick={onBack} className="flex items-center gap-2 text-white-smoke/60 hover:text-white-smoke transition-colors mb-6">
-                            <ArrowLeft className="w-5 h-5" /> Back to Library
+                    <div className={`relative p-8 ${isEditing && !localMeta.coverImage ? 'bg-gradient-to-b from-violet-brand/20 to-onyx' : 'pt-24'}`}>
+                        <button onClick={() => { if (isNew && !confirm('Discard this workflow?')) return; onBack(); }} className="flex items-center gap-2 text-white-smoke/60 hover:text-white-smoke transition-colors mb-6">
+                            <ArrowLeft className="w-5 h-5" /> {isNew ? 'Cancel' : 'Back to Library'}
                         </button>
 
-                        <div className="flex items-center gap-3 mb-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${category.color}`}>
-                                {category.icon} {category.label}
-                            </span>
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${workflow.status === 'published' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
-                                {workflow.status.replace('_', ' ')}
-                            </span>
-                        </div>
+                        {isEditing ? (
+                            <>
+                                {/* Editable Metadata */}
+                                <div className="space-y-4 mb-6">
+                                    <input
+                                        type="text"
+                                        value={localMeta.title}
+                                        onChange={(e) => setLocalMeta(prev => ({ ...prev, title: e.target.value }))}
+                                        placeholder="Workflow Title *"
+                                        className="w-full bg-transparent border-b-2 border-white-smoke/20 focus:border-orange-brand text-4xl md:text-5xl font-heading font-bold text-white-smoke outline-none pb-2 placeholder:text-white-smoke/30"
+                                    />
+                                    <textarea
+                                        value={localMeta.description}
+                                        onChange={(e) => setLocalMeta(prev => ({ ...prev, description: e.target.value }))}
+                                        placeholder="Brief description of this workflow..."
+                                        rows={2}
+                                        className="w-full bg-transparent border-b border-white-smoke/10 focus:border-orange-brand/50 text-xl text-white-smoke/80 outline-none resize-none placeholder:text-white-smoke/30"
+                                    />
+                                </div>
 
-                        <h1 className="text-4xl md:text-5xl font-heading font-bold text-white-smoke mb-4">{workflow.title}</h1>
-                        <p className="text-xl text-white-smoke/60 font-light mb-6">{workflow.description}</p>
+                                {/* Metadata Row */}
+                                <div className="flex flex-wrap items-center gap-4 text-sm">
+                                    <select
+                                        value={localMeta.category}
+                                        onChange={(e) => setLocalMeta(prev => ({ ...prev, category: e.target.value }))}
+                                        className="bg-cyan-blue/30 border border-white-smoke/10 rounded-lg px-3 py-2 text-white-smoke outline-none"
+                                    >
+                                        {WORKFLOW_CATEGORIES.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.icon} {cat.label}</option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={localMeta.difficulty}
+                                        onChange={(e) => setLocalMeta(prev => ({ ...prev, difficulty: e.target.value }))}
+                                        className="bg-cyan-blue/30 border border-white-smoke/10 rounded-lg px-3 py-2 text-white-smoke outline-none"
+                                    >
+                                        <option value="beginner">Beginner</option>
+                                        <option value="intermediate">Intermediate</option>
+                                        <option value="advanced">Advanced</option>
+                                    </select>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-white-smoke/40">⏱️</span>
+                                        <input
+                                            type="number"
+                                            value={localMeta.estimatedTime}
+                                            onChange={(e) => setLocalMeta(prev => ({ ...prev, estimatedTime: parseInt(e.target.value) || 0 }))}
+                                            className="w-16 bg-cyan-blue/30 border border-white-smoke/10 rounded-lg px-2 py-2 text-white-smoke outline-none text-center"
+                                            min={1}
+                                        />
+                                        <span className="text-white-smoke/40">min</span>
+                                    </div>
+                                    <input
+                                        type="url"
+                                        value={localMeta.coverImage}
+                                        onChange={(e) => setLocalMeta(prev => ({ ...prev, coverImage: e.target.value }))}
+                                        placeholder="Cover image URL (optional)"
+                                        className="flex-1 min-w-[200px] bg-cyan-blue/30 border border-white-smoke/10 rounded-lg px-3 py-2 text-white-smoke outline-none placeholder:text-white-smoke/30"
+                                    />
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                {/* Read-only View */}
+                                <div className="flex items-center gap-3 mb-4">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${category.color}`}>
+                                        {category.icon} {category.label}
+                                    </span>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${workflow.status === 'published' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                                        {workflow.status.replace('_', ' ')}
+                                    </span>
+                                </div>
 
-                        <div className="flex items-center gap-6 text-sm text-white-smoke/50">
-                            <span>⏱️ {workflow.estimatedTime} min</span>
-                            <span>📋 {totalSteps} steps</span>
-                            <span className={`px-2 py-0.5 rounded ${getDifficultyStyle(workflow.difficulty)}`}>
-                                {workflow.difficulty}
-                            </span>
-                            <span>Updated {workflow.lastUpdated} by {workflow.author}</span>
-                        </div>
+                                <h1 className="text-4xl md:text-5xl font-heading font-bold text-white-smoke mb-4">{localMeta.title}</h1>
+                                <p className="text-xl text-white-smoke/60 font-light mb-6">{localMeta.description}</p>
+
+                                <div className="flex items-center gap-6 text-sm text-white-smoke/50">
+                                    <span>⏱️ {localMeta.estimatedTime} min</span>
+                                    <span>📋 {totalSteps} steps</span>
+                                    <span className={`px-2 py-0.5 rounded ${getDifficultyStyle(localMeta.difficulty)}`}>
+                                        {localMeta.difficulty}
+                                    </span>
+                                    <span>Updated {workflow.lastUpdated} by {workflow.author}</span>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 
-                {/* Progress Bar */}
-                {totalSteps > 0 && (
-                    <div className="bg-onyx rounded-xl p-4 border border-white-smoke/5 mb-6">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-bold text-white-smoke">Your Progress</span>
-                            <span className="text-sm text-orange-brand font-bold">{progress}%</span>
+
+                {/* Admin Approval Actions for Pending Workflows */}
+                {isPending && isAdmin && (
+                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 mb-6 flex items-center justify-between">
+                        <div>
+                            <p className="text-yellow-400 font-bold">⏳ Pending Approval</p>
+                            <p className="text-yellow-400/60 text-sm">Submitted by {workflow.author}</p>
                         </div>
-                        <div className="h-2 bg-white-smoke/10 rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-gradient-to-r from-orange-brand to-violet-brand transition-all duration-500"
-                                style={{ width: `${progress}%` }}
-                            />
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleReject}
+                                className="px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg font-bold"
+                            >
+                                Reject
+                            </button>
+                            <button
+                                onClick={handleApprove}
+                                className="px-4 py-2 bg-emerald-500 text-white hover:bg-emerald-600 rounded-lg font-bold"
+                            >
+                                Approve & Publish
+                            </button>
                         </div>
-                        <p className="text-[10px] text-white-smoke/40 mt-2">{completedSteps.length} of {totalSteps} required steps completed</p>
                     </div>
                 )}
 
                 {/* Content */}
                 <div className="bg-onyx rounded-2xl p-8 border border-white-smoke/5 shadow-2xl">
-                    <div className="flex justify-end gap-3 mb-8">
+                    <div className="flex justify-between items-center gap-3 mb-8">
+                        {isNew && !isAdmin && (
+                            <div className="text-yellow-400 text-sm flex items-center gap-2">
+                                ⚠️ This will be submitted for approval
+                            </div>
+                        )}
+                        <div className="flex-1" />
                         {!isEditing && isAdmin && (
                             <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 bg-white-smoke/10 hover:bg-white-smoke/20 text-white-smoke px-4 py-2 rounded-lg transition-all">
                                 <Edit2 className="w-4 h-4" /> Edit
@@ -215,23 +340,42 @@ const WorkflowsModule = ({ userRole }) => {
                         )}
                         {isEditing && (
                             <button onClick={handleSave} className="flex items-center gap-2 bg-orange-brand hover:bg-orange-brand/90 text-white-smoke px-4 py-2 rounded-lg transition-all">
-                                <Check className="w-4 h-4" /> Save Changes
+                                <Check className="w-4 h-4" /> {isNew ? (isAdmin ? 'Publish Workflow' : 'Submit for Approval') : 'Save Changes'}
                             </button>
                         )}
                     </div>
 
-                    <div className="space-y-8">
-                        {localSections.map((section, idx) => renderSection(section, idx))}
-                    </div>
+                    {localSections.length === 0 && isEditing ? (
+                        <div className="text-center py-12 text-white-smoke/40">
+                            <p className="text-lg mb-2">Start building your workflow</p>
+                            <p className="text-sm mb-6">Add steps, text blocks, images, or videos below</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-8">
+                            {localSections.map((section, idx) => renderSection(section, idx))}
+                        </div>
+                    )}
 
                     {isEditing && (
                         <div className="mt-12 p-8 border-2 border-dashed border-white-smoke/10 rounded-xl text-center">
                             <p className="text-white-smoke/40 text-sm mb-4">Add Content Block</p>
                             <div className="flex justify-center gap-4">
-                                <button onClick={() => addSection('text')} className="p-3 bg-white-smoke/5 rounded-lg hover:bg-white-smoke/10"><FileText className="w-5 h-5" /></button>
-                                <button onClick={() => addSection('step')} className="p-3 bg-orange-brand/20 rounded-lg hover:bg-orange-brand/30 text-orange-brand"><CheckSquare className="w-5 h-5" /></button>
-                                <button onClick={() => addSection('image')} className="p-3 bg-white-smoke/5 rounded-lg hover:bg-white-smoke/10"><ImageIcon className="w-5 h-5" /></button>
-                                <button onClick={() => addSection('video')} className="p-3 bg-white-smoke/5 rounded-lg hover:bg-white-smoke/10"><Video className="w-5 h-5" /></button>
+                                <button onClick={() => addSection('step')} className="flex flex-col items-center gap-2 p-4 bg-orange-brand/20 rounded-lg hover:bg-orange-brand/30 text-orange-brand">
+                                    <CheckSquare className="w-6 h-6" />
+                                    <span className="text-xs">Step</span>
+                                </button>
+                                <button onClick={() => addSection('text')} className="flex flex-col items-center gap-2 p-4 bg-white-smoke/5 rounded-lg hover:bg-white-smoke/10">
+                                    <FileText className="w-6 h-6" />
+                                    <span className="text-xs">Text</span>
+                                </button>
+                                <button onClick={() => addSection('image')} className="flex flex-col items-center gap-2 p-4 bg-white-smoke/5 rounded-lg hover:bg-white-smoke/10">
+                                    <ImageIcon className="w-6 h-6" />
+                                    <span className="text-xs">Image</span>
+                                </button>
+                                <button onClick={() => addSection('video')} className="flex flex-col items-center gap-2 p-4 bg-white-smoke/5 rounded-lg hover:bg-white-smoke/10">
+                                    <Video className="w-6 h-6" />
+                                    <span className="text-xs">Video</span>
+                                </button>
                             </div>
                         </div>
                     )}
@@ -240,11 +384,12 @@ const WorkflowsModule = ({ userRole }) => {
         );
     };
 
-    // Filter workflows
+    // Filter workflows - pending ONLY visible in Approvals tab (admin only)
     const filteredWorkflows = db.filter(w => {
         // Tab filter
         if (activeTab === 'approvals') return w.status === 'pending_approval';
-        if (activeTab === 'library' && w.status === 'pending_approval' && !isAdmin) return false;
+        // Library tab: NEVER show pending (even for admins - they see it in Approvals)
+        if (activeTab === 'library' && w.status === 'pending_approval') return false;
 
         // Category filter
         if (activeCategory !== 'all' && w.category !== activeCategory) return false;
@@ -302,8 +447,8 @@ const WorkflowsModule = ({ userRole }) => {
                     <button
                         onClick={() => setActiveCategory('all')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeCategory === 'all'
-                                ? 'bg-orange-brand/20 text-orange-brand border border-orange-brand/30'
-                                : 'bg-onyx border border-white-smoke/10 text-white-smoke/60 hover:text-white-smoke'
+                            ? 'bg-orange-brand/20 text-orange-brand border border-orange-brand/30'
+                            : 'bg-onyx border border-white-smoke/10 text-white-smoke/60 hover:text-white-smoke'
                             }`}
                     >
                         All
@@ -313,8 +458,8 @@ const WorkflowsModule = ({ userRole }) => {
                             key={cat.id}
                             onClick={() => setActiveCategory(cat.id)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${activeCategory === cat.id
-                                    ? `${cat.color} border border-current`
-                                    : 'bg-onyx border border-white-smoke/10 text-white-smoke/60 hover:text-white-smoke'
+                                ? `${cat.color} border border-current`
+                                : 'bg-onyx border border-white-smoke/10 text-white-smoke/60 hover:text-white-smoke'
                                 }`}
                         >
                             {cat.icon} {cat.label}
@@ -390,9 +535,13 @@ const WorkflowsModule = ({ userRole }) => {
                 })}
 
                 {/* Create New Card */}
-                <div className="group bg-onyx/40 rounded-2xl p-6 border-2 border-dashed border-white-smoke/5 hover:border-orange-brand/30 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[250px] text-white-smoke/40 hover:text-orange-brand">
+                <div
+                    onClick={handleCreateWorkflow}
+                    className="group bg-onyx/40 rounded-2xl p-6 border-2 border-dashed border-white-smoke/5 hover:border-orange-brand/30 transition-all cursor-pointer flex flex-col items-center justify-center min-h-[250px] text-white-smoke/40 hover:text-orange-brand"
+                >
                     <Plus className="w-12 h-12 mb-4 group-hover:scale-110 transition-transform" />
                     <span className="font-heading font-bold text-lg">Create New Workflow</span>
+                    {!isAdmin && <span className="text-xs mt-2">Requires admin approval</span>}
                 </div>
             </div>
         </div>
